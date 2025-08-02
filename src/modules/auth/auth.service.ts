@@ -144,15 +144,18 @@ export class AuthService {
     });
 
     if (!user) {
-      user = this.userRepository.create({ phone: otpFounded.phone , active: true });
+      user = this.userRepository.create({
+        phone: otpFounded.phone,
+        active: true,
+      });
       await this.userRepository.save(user);
     }
 
-    if(!user.active){
+    if (!user.active) {
       user.active = true;
       await this.userRepository.save(user);
     }
- 
+
     const tokens = this.makeTokens({ id: user.id });
     return this.sendResponse(res, tokens);
   }
@@ -256,46 +259,42 @@ export class AuthService {
   async refreshToken(res: Response) {
     const token = this.extractToken(this.request);
     const user = await this.validateToken(token, 'refresh');
-    console.log('rus' , user)
     const tokens = this.makeTokens({ id: user.id });
     return this.sendResponse(res, tokens);
   }
 
   protected extractToken(request: Request) {
-    const {authorization} = request.headers;
-    if(!authorization || authorization?.trim() == ""){
-      throw new UnauthorizedException("شما دسترسی ندارید");
+
+    // First try to get token from Authorization header
+    const { authorization } = request.headers;
+    if (authorization && authorization.trim() !== '') {
+      const [bearer, token] = authorization.split(' ');
+      if (bearer?.toLowerCase() === 'bearer' && token) {
+        return token;
+      }
     }
 
-    const [bearer , token] = authorization.split(" ");
-    if(bearer?.toLowerCase() !== 'bearer' || !token ){
-        throw new UnauthorizedException("شما دسترسی ندارید");
+    // If no authorization header, try to get from cookies
+    const accessToken = request.cookies?.['refresh-token'];
+    if (accessToken) {
+      return accessToken;
     }
 
-    return token;
+    // Alternative cookie parsing method
+    const cookies = request.headers.cookie;
+    if (cookies) {
+      const cookieArray = cookies.split('; ');
+      for (const cookie of cookieArray) {
+        if (cookie.startsWith('refresh-token=')) {
+          const token = cookie.split('=')[1];
+          if (token) {
+            return token;
+          }
+        }
+      }
+    }
 
-    // جور دیگر گرفتن کوی
-    //const accessToken1 = request.cookies?.['accessToken'];
-    //console.log(accessToken1)
-
-    // const cookies = request.headers.cookie;
-    // if (!cookies) {
-    //   throw new ForbiddenException('شما دسترسی ندارید');
-    // }
-    // const cookieArray = cookies.split('; ');
-
-    // let refreshToken: string | null = null;
-
-    // cookieArray.forEach((cookie) => {
-    //   if (cookie.startsWith('refresh-token=')) {
-    //     refreshToken = cookie.split('=')[1]; // استخراج accessToken
-    //   }
-    // });
-
-    // if (!refreshToken) {
-    //   throw new ForbiddenException('شما دسترسی ندارید');
-    // }
-
-    // return refreshToken;
+    // If no token found in either method, throw error
+    throw new ForbiddenException('شما دسترسی ندارید');
   }
 }

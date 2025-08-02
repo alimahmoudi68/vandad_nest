@@ -23,21 +23,21 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('/otp')
-  @ApiConsumes(SwaggerConsumes.UrlEncoded , SwaggerConsumes.Json )
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
   @Version('1')
   async sendOtp(@Body() sendOtpDto: SendOtpDto) {
     return await this.authService.sendOtp(sendOtpDto);
   }
 
   @Post('/verify')
-  @ApiConsumes(SwaggerConsumes.UrlEncoded , SwaggerConsumes.Json )
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
   @Version('1')
   checkOtp(@Body() verifyOtpDto: VerifyOtpDto, @Res() res: Response) {
-    return this.authService.verifyOtp(verifyOtpDto , res);
+    return this.authService.verifyOtp(verifyOtpDto, res);
   }
 
   @Post('/refresh-token')
-  @ApiConsumes(SwaggerConsumes.UrlEncoded , SwaggerConsumes.Json )
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
   @Version('1')
   refreshToken(@Res() res: Response) {
     return this.authService.refreshToken(res);

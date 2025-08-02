@@ -1,11 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { CreateBlogCatDto } from './dto/create-blog-cat.dto';
 import { UpdateBlogCatDto } from './dto/update-blog-cat.dto';
 import { BlogCatEntity } from './entities/blog-cat.entity';
 import { Repository } from 'typeorm';
-
 
 @Injectable()
 export class BlogCategoryService {
@@ -43,15 +42,52 @@ export class BlogCategoryService {
     };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} blogCategory`;
+  async findOne(id: number) {
+    const category = await this.blogCatRepository.findOne({
+      where: {
+        id,
+      },
+    });
+    if (!category) {
+      throw new NotFoundException('دسته بندی مورد نظر پیدا نشد');
+    }
+    return {category};
   }
 
-  update(id: number, updateBlogCatDto: UpdateBlogCatDto) {
-    return `This action updates a #${id} blogCategory`;
+  async update(id: number, updateBlogCatDto: UpdateBlogCatDto) {
+    const category = await this.blogCatRepository.findOne({
+      where: { id },
+    });
+    if (!category) {
+      throw new NotFoundException('دسته بندی مورد نظر پیدا نشد');
+    }
+
+    let { title , slug } = updateBlogCatDto;
+
+    if(title){
+      category.title = title;
+    }
+
+    // بررسی تکراری نبودن اسلاگ
+    if (slug && slug !== category.slug) {
+      const existSlug = await this.blogCatRepository.findOne({
+        where: { slug },
+      });
+      if (existSlug && existSlug.id !== id) {
+        throw new BadRequestException('اسلاگ دسته بندی تکراری است');
+      }
+      category.slug = slug;
+    }
+
+    await this.blogCatRepository.save(category);
+    return {category};
+
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} blogCategory`;
+  async remove(id: number) {
+    const reslult = await this.blogCatRepository.delete(id);
+    if (reslult.affected == 0) {
+      throw new NotFoundException('دسته بندی یافت نشد');
+    }
   }
 }

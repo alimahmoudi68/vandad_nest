@@ -5,8 +5,7 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AllExceptionsFilter } from './interceptors/error.interceptor';
 import { ErrorService } from './modules/error/error.service';
-
-
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -22,33 +21,33 @@ async function bootstrap() {
 
   // فعال کردن نسخه‌بندی به صورت مسیر
   app.enableVersioning({
-    type: VersioningType.URI, 
+    type: VersioningType.URI,
   });
 
+  // اضافه کردن cookie-parser middleware
+  app.use(cookieParser());
 
   const errorService = app.get(ErrorService);
   app.useGlobalFilters(new AllExceptionsFilter(errorService));
 
-  
-
   //  قعال شدن کورس
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],     
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,  
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposedHeaders: ['Set-Cookie'],
   });
-
 
   // اگر از ماژول کانفیگ استفاده کنیم اینجوری هم میشه
   // const configService = app.get(ConfigService);
   // const port = configService.get('App.port');
 
-  const {PORT} = process.env;
-  await app.listen(PORT , ()=>{
+  const { PORT } = process.env;
+  await app.listen(PORT, () => {
     console.log(`app running on port : ${PORT}`);
-    console.log(`api document: http://localhost:${PORT}/api-docs`)
+    console.log(`api document: http://localhost:${PORT}/api-docs`);
   });
 }
-
 
 bootstrap();

@@ -3,14 +3,16 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   Delete,
   Version,
   UseInterceptors,
+  UseGuards,
+  Put
 } from '@nestjs/common';
 import { ApiTags, ApiConsumes } from '@nestjs/swagger';
 
+import { AuthGuard } from '../auth/guards/auth.guard';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 import { BlogCategoryService } from './blog-cat.service';
 import { CreateBlogCatDto } from './dto/create-blog-cat.dto';
@@ -18,6 +20,7 @@ import { UpdateBlogCatDto } from './dto/update-blog-cat.dto';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
 
 @ApiTags('Admin Blog Cats')
+@UseGuards(AuthGuard)
 @UseInterceptors(ResponseFormatInterceptor)
 @Controller('admin/blog-cats')
 export class BlogCategoryController {
@@ -38,11 +41,13 @@ export class BlogCategoryController {
   }
 
   @Get(':id')
+  @Version('1')
   findOne(@Param('id') id: string) {
     return this.blogCategoryService.findOne(+id);
   }
 
-  @Patch(':id')
+  @Put(':id')
+  @Version('1')
   update(
     @Param('id') id: string,
     @Body() updateBlogCatDto: UpdateBlogCatDto,
@@ -51,6 +56,7 @@ export class BlogCategoryController {
   }
 
   @Delete(':id')
+  @Version('1')
   remove(@Param('id') id: string) {
     return this.blogCategoryService.remove(+id);
   }

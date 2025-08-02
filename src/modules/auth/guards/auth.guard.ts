@@ -31,42 +31,36 @@ export class AuthGuard implements CanActivate {
   }
 
   protected extractToken(request: Request) {
-    
-    const {authorization} = request.headers;
-    if(!authorization || authorization?.trim() == ""){
-        throw new ForbiddenException("شما دسترسی ندارید");
+    // First try to get token from Authorization header
+    const { authorization } = request.headers;
+    if (authorization && authorization.trim() !== '') {
+      const [bearer, token] = authorization.split(' ');
+      if (bearer?.toLowerCase() === 'bearer' && token) {
+        return token;
+      }
     }
 
-    const [bearer , token] = authorization.split(" ");
-    if(bearer?.toLowerCase() !== 'bearer' || !token){
-        throw new ForbiddenException("شما دسترسی ندارید");
+    // If no authorization header, try to get from cookies
+    const accessToken = request.cookies?.['accessToken'];
+    if (accessToken) {
+      return accessToken;
     }
 
-    return token;
+    // Alternative cookie parsing method
+    const cookies = request.headers.cookie;
+    if (cookies) {
+      const cookieArray = cookies.split('; ');
+      for (const cookie of cookieArray) {
+        if (cookie.startsWith('access-token=')) {
+          const token = cookie.split('=')[1];
+          if (token) {
+            return token;
+          }
+        }
+      }
+    }
 
-    // جور دیگر گرفتن کوی
-    //const accessToken1 = request.cookies?.['accessToken'];
-    //console.log(accessToken1)
-
-    // const cookies = request.headers.cookie;
-
-    // if (!cookies) {
-    //   throw new ForbiddenException('شما دسترسی ندارید');
-    // }
-
-    // const cookieArray = cookies.split('; ');
-
-    // let accessToken: string | null = null;
-    // cookieArray.forEach((cookie) => {
-    //   if (cookie.startsWith('access-token=')) {
-    //     accessToken = cookie.split('=')[1]; // استخراج accessToken
-    //   }
-    // });
-
-    // if (!accessToken) {
-    //   throw new ForbiddenException('شما دسترسی ندارید');
-    // }
-
-    // return accessToken;
+    // If no token found in either method, throw error
+    throw new ForbiddenException('شما دسترسی ندارید');
   }
 }
