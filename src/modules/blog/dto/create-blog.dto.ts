@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsArray, IsNotEmpty, IsOptional, Length } from "class-validator";
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, Length } from "class-validator";
 
 export class CreateBlogDto {
 
@@ -21,13 +21,13 @@ export class CreateBlogDto {
     @Length(3,50,{message : "عنوان مقاله باید بین ۳ و ۵۰ کاراکتر باشد"})
     slug: string
 
-    @ApiProperty()
-    @IsNotEmpty({message: "زمان مطالعه مقاله را وارد کنید"})
-    @Length(1, 2, { message: "زمان مطالعه باید بین ۱ و ۲ کاراکتر باشد" })
-    timeStudy: string
-
     @ApiProperty({type : "integer" , isArray: true})
     @IsArray({message: "دسته بندی ها باید یک آرایه از عدد باشد"})
     categories: number[] 
+
+    @IsOptional()
+    @IsNumber({}, { message: "آیدی تصویر بندانگشتی باید عدد باشد" })
+    @ApiProperty({example: 1})
+    image?: number;
 
 }

@@ -23,12 +23,16 @@ import { FilterBlog } from 'src/common/decorators/filterBlog.decorator';
 import { FilterBlogDto } from 'src/common/dto/filterBlog.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { BlogCommentService } from './comment.service';
+import { UploadEntity } from '../upload/entities/upload.entity';
+
 
 @Injectable({ scope: Scope.REQUEST })
 export class BlogService {
   constructor(
     @InjectRepository(BlogEntity)
     private blogRepository: Repository<BlogEntity>,
+    @InjectRepository(UploadEntity)
+    private readonly uploadRepository: Repository<UploadEntity>,
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
     @InjectRepository(BlogCatEntity)
@@ -38,7 +42,7 @@ export class BlogService {
   ) {}
 
   async create(createBlogDto: CreateBlogDto) {
-    let { title, slug, content, categories, timeStudy } = createBlogDto;
+    let { title, slug, content, categories, image } = createBlogDto;
 
     // بررسی اینکه بلاگ با این slug قبلاً وجود دارد یا نه
     const blogExists = await this.checkBlogBySlug(slug);
@@ -53,6 +57,20 @@ export class BlogService {
       id: In(categories || []),
     });
 
+    console.log('image' , image)
+    let uploadEntity: UploadEntity | null = null;
+    if (image) {
+      console.log('32')
+      uploadEntity = await this.uploadRepository.findOneBy({
+        id: image,
+      });
+    }
+
+    // calc time study
+    const wordsPerMinute = 200;
+    const wordCount = content.trim().split(/\s+/).length;
+    const time_study = Math.ceil(wordCount / wordsPerMinute);
+
     const blog = this.blogRepository.create({
       title,
       slug,
@@ -60,13 +78,14 @@ export class BlogService {
       author,
       categories: selectedCategories, // 👈 اینجا آبجکت‌ها را پاس می‌دیم
       status: BlogStatus.Draft,
-      time_study: timeStudy,
+      time_study: String(time_study),
+      image: uploadEntity || undefined,
     });
 
     await this.blogRepository.save(blog);
 
     return {
-      message: 'بلاگ جدید با موفقیت ثبت شد',
+      message: 'مقاله جدید با موفقیت ثبت شد',
     };
   }
 
@@ -138,7 +157,7 @@ export class BlogService {
   }
 
   async update(id: number, updateBlogDto: UpdateBlogDto) {
-    let { title, slug, content, timeStudy, categories } = updateBlogDto;
+    let { title, slug, content, categories } = updateBlogDto;
     let blog = await this.blogRepository.findOneBy({ id });
     if (!blog) {
       throw new NotFoundException('مقاله مورد نظر یافت نشد');
@@ -158,7 +177,6 @@ export class BlogService {
       }
     }
     if (content) blog.content = content;
-    if (timeStudy) blog.time_study = timeStudy;
     if (categories) blog.categories = selectedCategories;
     await this.blogRepository.save(blog);
     return {

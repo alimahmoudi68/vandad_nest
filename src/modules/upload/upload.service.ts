@@ -19,14 +19,16 @@ export class UploadService {
 
 
   async create(file: Express.Multer.File) {
-    const { Key } = await this.s3Service.uploadFile(file , "products");
+    const bucket = process.env.S3_BUCKET_NAME;
+    const { Key } = await this.s3Service.uploadFile(file , bucket);
     const newUpload = this.uploadRepositpry.create({
       title: file.originalname,
+      bucket ,
       location: Key,
       alt: file.originalname
     });
     const saved = await this.uploadRepositpry.save(newUpload);
-    return { upload: saved };
+    return { upload: saved , bucket : "vandad"};
   }
 
   

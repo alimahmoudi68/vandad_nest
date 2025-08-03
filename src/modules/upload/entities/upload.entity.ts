@@ -10,11 +10,13 @@ export class UploadEntity {
     title: string;
 
     @Column({ nullable: false })
+    bucket: string;
+
+    @Column({ nullable: false })
     location: string;
 
     @Column({ nullable: false })
     alt: string;
-
 
     @CreateDateColumn()
     created_at: Date;

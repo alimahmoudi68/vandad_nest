@@ -14,6 +14,8 @@ import { BlogStatus } from '../enum/status.enum';
 import { UserEntity } from 'src/modules/users/entities/user.entity';
 import { BlogCommentEntity } from './blogComment.entity';
 import { BlogCatEntity } from 'src/modules/blog-cats/entities/blog-cat.entity';
+import { UploadEntity } from 'src/modules/upload/entities/upload.entity';
+
 
 @Entity('blog')
 export class BlogEntity {
@@ -29,8 +31,8 @@ export class BlogEntity {
   @Column({ nullable: false })
   content: string;
 
-  @Column({ nullable: true })
-  image: string;
+  @ManyToOne(() => UploadEntity, { nullable: true })
+  image: UploadEntity;
 
   @Column()
   time_study: string;
