@@ -13,6 +13,8 @@ import { BlogCommentService } from './comment.service';
 import { BlogCommentController } from './coment.controller';
 import { addUserToReqWOV } from 'src/common/middlewares/addUserToReqWOV.middleWare';
 import { UploadModule } from '../upload/upload.module';
+import { S3Service } from '../s3/s3.service';
+
 
 
 @Module({
@@ -22,7 +24,7 @@ import { UploadModule } from '../upload/upload.module';
     TypeOrmModule.forFeature([BlogEntity, BlogCatEntity, UserEntity, BlogCommentEntity]),
   ],
   controllers: [AdminBlogController,BlogController, BlogCommentController],
-  providers: [BlogService,  BlogCommentService],
+  providers: [BlogService,  BlogCommentService , S3Service],
 })
 export class BlogModule implements NestModule{
   configure(consumer: MiddlewareConsumer) {

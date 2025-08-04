@@ -7,46 +7,45 @@ import {
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
-import { CreateBlogDto } from './dto/create-blog.dto';
-import { UpdateBlogDto } from './dto/update-blog.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { BlogEntity } from './entities/blog.entity';
-import { UserEntity } from '../users/entities/user.entity';
-import { BlogCommentEntity } from './entities/blogComment.entity';
-import { BlogCatEntity } from '../blog-cats/entities/blog-cat.entity';
-import { FindOptionsWhere, In, IsNull, Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
-import { BlogStatus } from './enum/status.enum';
+
+import { CreateTvDto } from './dto/create-tv.dto';
+import { UpdateTvDto } from './dto/update-tv.dto';
+import { TvEntity } from './entities/tv.entity';
+import { UserEntity } from '../users/entities/user.entity';
+import { TvCommentEntity } from './entities/tvComment.entity';
+import { TvCatEntity } from '../tv-cats/entities/tv-cat.entity';
+import { TvStatus } from './enum/status.enum';
 import { randomId } from 'src/utils/common/randomId';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { paginationSolver } from 'src/utils/common/paginationSolver';
-import { FilterBlog } from 'src/common/decorators/filterBlog.decorator';
-import { FilterBlogDto } from 'src/common/dto/filterBlog.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
-import { BlogService } from './blog.service';
+import { TvService } from './tv.service';
 
 @Injectable({ scope: Scope.REQUEST })
-export class BlogCommentService {
+export class TvCommentService {
   constructor(
-    @InjectRepository(BlogEntity)
-    private blogRepository: Repository<BlogEntity>,
+    @InjectRepository(TvEntity)
+    private tvRepository: Repository<TvEntity>,
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
-    @InjectRepository(BlogCommentEntity)
-    private blogCommentRepository: Repository<BlogCommentEntity>,
-    @Inject(forwardRef(() => BlogService)) private blogService: BlogService,
+    @InjectRepository(TvCommentEntity)
+    private tvCommentRepository: Repository<TvCommentEntity>,
+    @Inject(forwardRef(() => TvService)) private tvService: TvService,
     @Inject(REQUEST) private request: Request,
   ) {}
 
   async create(createComentDto: CreateCommentDto) {
-    const { content, parentId, blogId } = createComentDto;
+    const { content, parentId, tvId } = createComentDto;
     const { id } = this.request.user!;
-    let parent: BlogCommentEntity | null = null;
+    let parent: TvCommentEntity | null = null;
 
-    const blog = await this.blogService.findOne(blogId);
+    const tv = await this.tvService.findOne(tvId);
     if (parentId && !isNaN(parentId)) {
-      parent = await this.blogCommentRepository.findOneBy({ id: +parentId });
+      parent = await this.tvCommentRepository.findOneBy({ id: +parentId });
       if (!parent) {
         throw new BadRequestException('کامنت پدر وجود ندارد');
       }
@@ -57,11 +56,11 @@ export class BlogCommentService {
       throw new BadRequestException('کاربر یافت نشد');
     }
 
-    this.blogCommentRepository.insert({
+    this.tvCommentRepository.insert({
       content,
       accepted: false,
       parent: parentId ? { id: parentId } : undefined,
-      blog: { id: blog.blog.id },
+      tv: { id: tv.tv.id },
       user: { id: user.id },
     });
 
@@ -73,13 +72,13 @@ export class BlogCommentService {
   async find(paginationDto: PaginationDto) {
     const { limit, page, skip } = paginationSolver(paginationDto);
 
-    const [comments, count] = await this.blogCommentRepository.findAndCount({
+    const [comments, count] = await this.tvCommentRepository.findAndCount({
       relations: {
-        blog: true,
+        tv: true,
         user: true,
       },
       select: {
-        blog: {
+        tv: {
           title: true,
         },
         user: {
@@ -103,21 +102,21 @@ export class BlogCommentService {
     };
   }
 
-  async findCommentsOfBlog(blogId: number, paginationDto: PaginationDto) {
+  async findCommentsOfTv(tvId: number, paginationDto: PaginationDto) {
     const { limit, page, skip } = paginationSolver(paginationDto);
 
-    const [comments, count] = await this.blogCommentRepository.findAndCount({
+    const [comments, count] = await this.tvCommentRepository.findAndCount({
       where: {
-        blog: { id: blogId },
+        tv: { id: tvId },
         parent: IsNull(),
       },
       relations: {
-        blog: true,
+        tv: true,
         user: true,
         childs: true,
       },
       select: {
-        blog: {
+        tv: {
           title: true,
         },
         user: {
@@ -142,7 +141,7 @@ export class BlogCommentService {
   }
 
   async findOne(id: number) {
-    const comment = await this.blogCommentRepository.findOneBy({ id });
+    const comment = await this.tvCommentRepository.findOneBy({ id });
     if (!comment) {
       throw new NotFoundException('کامنت یافت نشد');
     }
@@ -155,7 +154,7 @@ export class BlogCommentService {
       throw new BadRequestException('این کامنت قبلا تایید شده است');
     }
     comment.accepted = true;
-    await this.blogCommentRepository.save(comment);
+    await this.tvCommentRepository.save(comment);
 
     return {
       message: 'کامنت با موفقیت تایید شد',
@@ -168,7 +167,7 @@ export class BlogCommentService {
       throw new BadRequestException('این کامنت قبلا رد شده است');
     }
     comment.accepted = false;
-    await this.blogCommentRepository.save(comment);
+    await this.tvCommentRepository.save(comment);
 
     return {
       message: 'کامنت با موفقیت رد شد',

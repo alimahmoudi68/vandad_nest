@@ -1,3 +1,4 @@
+import { Optional } from "@nestjs/common";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsArray, IsNotEmpty, IsNumber, IsOptional, Length } from "class-validator";
 
@@ -8,8 +9,13 @@ export class CreateBlogDto {
     @Length(3,50,{message : "عنوان مقاله باید بین ۳ و ۵۰ کاراکتر باشد"})
     title: string
 
-    // @ApiProperty({format: "binary"})
-    // image: string
+    @ApiProperty({example: ""})
+    @Optional()
+    keywords_meta: string
+
+    @ApiProperty({example: "عنوان مقاله"})
+    @Optional()
+    description_meta: string
 
     @ApiProperty({example: "متن مقاله"})
     @IsNotEmpty({message: "متن مقاله را وارد کنید"})

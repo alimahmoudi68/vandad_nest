@@ -25,13 +25,19 @@ export class BlogEntity {
   @Column({ nullable: false })
   title: string;
 
+  @Column({})
+  keywords_meta: string;
+
+  @Column({})
+  description_meta: string;
+
   @Column({ nullable: false, unique: true })
   slug: string;
 
   @Column({ nullable: false })
   content: string;
 
-  @ManyToOne(() => UploadEntity, { nullable: true })
+  @ManyToOne(() => UploadEntity, { nullable: true , onDelete: 'SET NULL', onUpdate: 'CASCADE'})
   image: UploadEntity;
 
   @Column()

@@ -18,6 +18,9 @@ import { UploadModule } from './modules/upload/upload.module';
 import { AttributeModule } from './modules/attribute/attribute.module';
 import { CoursesModule } from './modules/courses/courses.module';
 import { InvoiceModule } from './modules/invoice/invoice.module';
+import { TvCategoryModule } from './modules/tv-cats/tv-cat.module';
+import { TvModule } from './modules/tv/tv.module';
+
 
 @Module({
   imports: [
@@ -41,6 +44,8 @@ import { InvoiceModule } from './modules/invoice/invoice.module';
     AttributeModule,
     CoursesModule,
     InvoiceModule,
+    TvCategoryModule,
+    TvModule
   ],
   controllers: [],
   providers: [],
