@@ -22,8 +22,7 @@ export class CreateBlogDto {
     @Length(3,2000,{message : "متن مقاله باید بین ۳ و ۲۰۰۰ کاراکتر باشد"})
     content: string
 
-    @ApiPropertyOptional()
-    @IsOptional()
+    @ApiProperty()
     @Length(3,50,{message : "عنوان مقاله باید بین ۳ و ۵۰ کاراکتر باشد"})
     slug: string
 

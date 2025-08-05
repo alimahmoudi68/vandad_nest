@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { S3Service } from '../s3/s3.service';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { paginationSolver } from 'src/utils/common/paginationSolver';
+import {getCurrentYearMonth} from 'src/utils/common/getCurrentYearMonth';
 
 
 @Injectable()
@@ -20,7 +21,7 @@ export class UploadService {
 
   async create(file: Express.Multer.File) {
     const bucket = process.env.S3_BUCKET_NAME;
-    const { Key } = await this.s3Service.uploadFile(file , bucket);
+    const { Key } = await this.s3Service.uploadFile(file , getCurrentYearMonth());
     const newUpload = this.uploadRepositpry.create({
       title: file.originalname,
       bucket ,
@@ -28,7 +29,7 @@ export class UploadService {
       alt: file.originalname
     });
     const saved = await this.uploadRepositpry.save(newUpload);
-    return { upload: saved , bucket : "vandad"};
+    return { upload: saved };
   }
 
   

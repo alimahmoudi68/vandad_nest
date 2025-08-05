@@ -16,10 +16,13 @@ import { BlogModule } from './modules/blog/blog.module';
 import { BlogCategoryModule } from './modules/blog-cats/blog-cat.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { AttributeModule } from './modules/attribute/attribute.module';
-import { CoursesModule } from './modules/courses/courses.module';
+import { CourseModule } from './modules/courses/course.module';
 import { InvoiceModule } from './modules/invoice/invoice.module';
 import { TvCategoryModule } from './modules/tv-cats/tv-cat.module';
 import { TvModule } from './modules/tv/tv.module';
+import { EpisodeModule } from './modules/episodes/episode.module';
+import { CourseCategoryModule } from './modules/course-cats/course-cat.module';
+
 
 
 @Module({
@@ -42,10 +45,12 @@ import { TvModule } from './modules/tv/tv.module';
     BlogCategoryModule,
     UploadModule,
     AttributeModule,
-    CoursesModule,
+    CourseModule,
     InvoiceModule,
     TvCategoryModule,
-    TvModule
+    TvModule,
+    EpisodeModule,
+    CourseCategoryModule
   ],
   controllers: [],
   providers: [],

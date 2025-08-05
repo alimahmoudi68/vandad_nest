@@ -12,7 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { BlogEntity } from './entities/blog.entity';
 import { UserEntity } from '../users/entities/user.entity';
 import { BlogCatEntity } from '../blog-cats/entities/blog-cat.entity';
-import { FindOptionsWhere, In, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import { BlogStatus } from './enum/status.enum';
