@@ -114,6 +114,7 @@ export class BlogService {
       .addSelect([
         'category.id',
         'category.title',
+        'category.slug',
         'author.firstName',
         'author.lastName',
         'image.bucket',
@@ -314,11 +315,14 @@ export class BlogService {
       .createQueryBuilder('blog')
       .leftJoin('blog.categories', 'category')
       .leftJoin('blog.author', 'author')
+      .leftJoin('blog.image', 'image')
       .addSelect([
         'category.id',
         'category.title',
         'author.firstName',
         'author.lastName',
+        'image.bucket',
+        'image.location',
       ])
       .where({ slug })
       .loadRelationCountAndMap('blog.likedUsersCount', 'blog.likedUsers')

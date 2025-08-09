@@ -85,11 +85,18 @@ export class CourseService {
         .createQueryBuilder('course')
         .leftJoin('course.categories', 'category')
         .leftJoin('course.image', 'image')
+        .leftJoin('course.episodes', 'episodes')
         .addSelect([
           'category.id',
           'category.title',
           'image.bucket',
           'image.location',
+          'episodes.id',
+          'episodes.title',
+          'episodes.content',
+          'episodes.price',
+          'episodes.date',
+          'episodes.time',
         ])
         .where(where, { cat, q })
         .loadRelationIdAndMap(
@@ -115,15 +122,17 @@ export class CourseService {
 
 
   async findOne(id: number) {
-    const course = await this.courseRepo.findOne({ 
-      where : { id } ,
-      relations : {
-        categories : true ,
-        image : true
-      } 
-    });
+    const course = await this.courseRepo
+    .createQueryBuilder('course')
+    .leftJoinAndSelect('course.categories', 'categories')
+    .leftJoinAndSelect('course.image', 'image')
+    .leftJoinAndSelect('course.episodes', 'episodes')
+    .where('course.id = :id', { id })
+    .orderBy('episodes.id', 'ASC') // ترتیب قدیمی به جدید (بر اساس date)
+    .getOne();
+
     if (!course) {
-      throw new BadRequestException('دوره پیدا پیدا نشد');
+      throw new BadRequestException('دوره پیدا نشد');
     }
     return {course};
   }

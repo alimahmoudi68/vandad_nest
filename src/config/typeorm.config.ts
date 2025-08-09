@@ -9,6 +9,7 @@ export function TypeOrmConfig() : TypeOrmModuleOptions{
         DB_USERNAME
     } = process.env ;
 
+    
     //console.log('dir' , __dirname ) // پوشه کانفیگ را نشان می دهد
     return{
         type : "mysql" ,
@@ -17,7 +18,7 @@ export function TypeOrmConfig() : TypeOrmModuleOptions{
         username : DB_USERNAME  ,
         password : DB_PASSWORD ,
         database : DB_NAME ,
-        synchronize : false ,
+        synchronize : true ,
         autoLoadEntities : false ,
         entities : [__dirname + '/../**/**/**/*.entity{.ts,.js}'],
         // entities : [

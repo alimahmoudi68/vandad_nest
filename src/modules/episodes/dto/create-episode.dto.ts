@@ -1,12 +1,22 @@
-import { IsString, IsInt, IsOptional } from 'class-validator';
+import { IsString, IsInt, IsOptional, IsNumber, IsDateString } from 'class-validator';
 
 export class CreateEpisodeDto {
   @IsString()
   title: string;
 
   @IsOptional()
-  @IsInt()
-  duration?: number;
+  @IsString()
+  content?: string;
+
+  @IsNumber()
+  price: number;
+
+  @IsString()
+  @IsOptional()
+  time: string;
+
+  @IsDateString()
+  date: string;
 
   @IsInt()
   courseId: number;

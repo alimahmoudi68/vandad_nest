@@ -6,11 +6,8 @@ import { UpdateBlogDto } from './dto/update-blog.dto';
 import { ApiTags , ApiBearerAuth, ApiConsumes, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
-import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
-import { FilterBlog } from 'src/common/decorators/filterBlog.decorator';
 import { GetBlogDto } from './dto/get-blog.dto';
 
 

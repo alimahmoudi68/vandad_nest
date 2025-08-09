@@ -9,6 +9,18 @@ export class EpisodeEntity {
   @Column()
   title: string;
 
+  @Column({nullable: true})
+  content: string;
+
+  @Column()
+  price: number;
+
+  @Column({nullable: true})
+  time: string;
+
+  @Column({ type: 'date' })
+  date: Date;
+
   @Column({ nullable: true, type: 'int' })
   duration?: number;
 
