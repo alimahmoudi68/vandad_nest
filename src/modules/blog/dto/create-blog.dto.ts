@@ -19,7 +19,7 @@ export class CreateBlogDto {
 
     @ApiProperty({example: "متن مقاله"})
     @IsNotEmpty({message: "متن مقاله را وارد کنید"})
-    @Length(3,2000,{message : "متن مقاله باید بین ۳ و ۲۰۰۰ کاراکتر باشد"})
+    @Length(3,8000,{message : "متن مقاله باید بین ۳ و ۲۰۰۰ کاراکتر باشد"})
     content: string
 
     @ApiProperty()

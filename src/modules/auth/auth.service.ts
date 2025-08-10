@@ -210,7 +210,7 @@ export class AuthService {
       });
 
       if (typeof payload !== 'object' || !payload?.id) {
-        throw new UnauthorizedException('Invalid token payload');
+        throw new ForbiddenException('توکن نامعتبر است');
       }
 
       const user = await this.userRepository.findOne({
@@ -218,7 +218,7 @@ export class AuthService {
       });
 
       if (!user) {
-        throw new UnauthorizedException('User not found');
+        throw new ForbiddenException('کاربر پیدا نشد');
       }
 
       // اگر توکن رفرش بود، بررسی کنیم که با توکن ذخیره شده در DB مطابقت دارد
@@ -228,9 +228,7 @@ export class AuthService {
 
       return user;
     } catch (err) {
-      throw new UnauthorizedException(
-        err.message || `Invalid ${tokenType} token`,
-      );
+      throw new ForbiddenException('توکن نامعتبر است');
     }
   }
 

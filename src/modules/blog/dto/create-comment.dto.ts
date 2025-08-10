@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { NewCustomVocabularyItem } from "aws-sdk/clients/lexmodelsv2";
-import { IsNumber, IsNumberString, IsOptional, Length } from "class-validator";
+import { IsNumber, IsOptional, Length } from "class-validator";
 
 export class CreateCommentDto{
     
@@ -9,11 +8,11 @@ export class CreateCommentDto{
     content: string
 
     @ApiPropertyOptional()
-    @IsNumberString()
+    @IsNumber()
     @IsOptional()
     parentId: number
 
     @ApiProperty()
-    @IsNumberString()
+    @IsNumber()
     blogId: number
 }
