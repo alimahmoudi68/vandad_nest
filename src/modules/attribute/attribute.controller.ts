@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param, Delete, UseInterceptors, Version, Query, Put } from '@nestjs/common';
 
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { AttributeService } from './attribute.service';
 import { CreateAttributeDto } from './dto/create-attribute.dto';
 import { UpdateAttributeDto } from './dto/update-attribute.dto';
@@ -8,6 +9,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 
 
+@AuthDecorator()
 @Controller('admin/attributes')
 @UseInterceptors(ResponseFormatInterceptor)
 export class AttributeController {

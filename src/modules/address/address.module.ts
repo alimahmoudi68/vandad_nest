@@ -4,9 +4,11 @@ import { AddressController } from './address.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AddressEntity } from './entities/address.entity';
 import { UserEntity } from '../users/entities/user.entity';
+import { AuthModule } from '../auth/auth.module';
+
 
 @Module({
-  imports:[TypeOrmModule.forFeature([AddressEntity , UserEntity])],
+  imports:[ AuthModule , TypeOrmModule.forFeature([AddressEntity , UserEntity])],
   controllers: [AddressController],
   providers: [AddressService],
 })

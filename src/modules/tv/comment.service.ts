@@ -12,6 +12,7 @@ import { IsNull, Repository } from 'typeorm';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 
+import { UpdateCommentDto } from './dto/update-comment.dto';
 import { CreateTvDto } from './dto/create-tv.dto';
 import { UpdateTvDto } from './dto/update-tv.dto';
 import { TvEntity } from './entities/tv.entity';
@@ -148,6 +149,15 @@ export class TvCommentService {
     return comment;
   }
 
+
+  async findOneDetail(id: number) {
+    const comment = await this.tvCommentRepository.findOneBy({ id });
+    if (!comment) {
+      throw new NotFoundException('کامنت یافت نشد');
+    }
+    return {comment};
+  }
+
   async accept(id: number) {
     const comment = await this.findOne(id);
     if (comment.accepted) {
@@ -173,4 +183,43 @@ export class TvCommentService {
       message: 'کامنت با موفقیت رد شد',
     };
   }
+
+
+  async remove(id: number) {
+    let comment = await this.tvCommentRepository.findOne({
+      where: { id },
+    });
+    if (!comment) {
+      throw new NotFoundException('نظر مورد نظر پیدا نشد');
+    }
+    await this.tvCommentRepository.delete({ id });
+    return {
+      message: 'نظر با موفقیت حذف شد',
+    };
+  }
+
+  async update(id: number, updateCommentDto: UpdateCommentDto) {
+    let {
+      content,
+    } = updateCommentDto;
+  
+    let comment = await this.tvCommentRepository.findOne({
+      where: { id },
+    });
+  
+    if (!comment) {
+      throw new NotFoundException('نظر مورد نظر یافت نشد');
+    }
+  
+    if (content) comment.content = content;
+  
+    await this.tvCommentRepository.save(comment);
+  
+  
+    return {
+      message: 'نظر با موفقیت ویرایش شد',
+    };
+  }
+
+
 }

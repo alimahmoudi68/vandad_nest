@@ -11,10 +11,10 @@ import { UserEntity } from '../users/entities/user.entity';
 import { BlogCommentEntity } from './entities/blogComment.entity';
 import { BlogCommentService } from './comment.service';
 import { BlogCommentController } from './coment.controller';
+import { AdminBlogCommentController } from './adminComent.controller';
 import { addUserToReqWOV } from 'src/common/middlewares/addUserToReqWOV.middleWare';
 import { UploadModule } from '../upload/upload.module';
 import { S3Service } from '../s3/s3.service';
-
 
 
 @Module({
@@ -23,7 +23,7 @@ import { S3Service } from '../s3/s3.service';
     UploadModule,
     TypeOrmModule.forFeature([BlogEntity, BlogCatEntity, UserEntity, BlogCommentEntity]),
   ],
-  controllers: [AdminBlogController,BlogController, BlogCommentController],
+  controllers: [AdminBlogController,BlogController, BlogCommentController, AdminBlogCommentController],
   providers: [BlogService,  BlogCommentService , S3Service],
 })
 export class BlogModule implements NestModule{

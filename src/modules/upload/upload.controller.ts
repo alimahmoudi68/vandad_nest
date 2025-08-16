@@ -1,7 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, Version, Query } from '@nestjs/common';
 import { UploadService } from './upload.service';
 import { UploadDto } from './dto/upload.dto';
-import { Auth } from '../auth/entities/auth.entity';
 import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 import { ApiConsumes } from '@nestjs/swagger';
@@ -10,7 +9,7 @@ import { UploadFileS3 } from 'src/common/interceptors/uploadFile.interceptor';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 
-// @AuthDecorator()
+//@AuthDecorator()
 @UseInterceptors(ResponseFormatInterceptor)
 @Controller('admin/uploads')
 export class UploadController {

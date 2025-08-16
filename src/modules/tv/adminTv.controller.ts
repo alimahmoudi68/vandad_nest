@@ -5,27 +5,25 @@ import {
   Body,
   Param,
   Delete,
-  UseGuards,
   UseInterceptors,
   Query,
   Version,
   Put,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiConsumes, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiConsumes, ApiQuery } from '@nestjs/swagger';
 
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { TvService } from './tv.service';
 import { CreateTvDto } from './dto/create-tv.dto';
 import { UpdateTvDto } from './dto/update-tv.dto';
-import { AuthGuard } from '../auth/guards/auth.guard';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
-import { GetTvDto } from './dto/get-tv.dto';
+import { GetTvQuery } from './dto/get-tv.dto';
 
 @ApiTags('Admin Tv')
+@AuthDecorator()
 @Controller('admin/tv')
-@UseGuards(AuthGuard)
-@ApiBearerAuth('Authorization')
 @UseInterceptors(ResponseFormatInterceptor)
 export class AdminTvController {
   constructor(private readonly tvService: TvService) {}
@@ -43,7 +41,7 @@ export class AdminTvController {
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiQuery({ name: 'q', required: false, type: String, example: 'nestjs' })
   @ApiQuery({ name: 'cat', required: false, type: String, example: 'tech' })
-  findAll(@Query() getTvQuery: GetTvDto) {
+  findAll(@Query() getTvQuery: GetTvQuery) {
     const { page, limit, ...filterBlogDto } = getTvQuery;
     const paginationDto: PaginationDto = {
       page: page ? Number(page) : 1,

@@ -13,18 +13,20 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
+
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { AdminUserService } from './adminUsers.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Response } from 'express';
-import { ApiTags } from '@nestjs/swagger';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 import { ProfileDto } from './dto/profile.dto';
 
 @Controller('admin/users')
+@AuthDecorator({isAdmin: true})
 @UseInterceptors(ResponseFormatInterceptor)
 @ApiTags('Users (custome Tag)')
-//@UseGuards(AuthGuard)
 export class AdminUsersController {
   constructor(private readonly userService: AdminUserService) {}
 

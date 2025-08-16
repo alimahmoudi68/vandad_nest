@@ -11,22 +11,22 @@ import {
   Res,
   HttpStatus,
   Query,
-  UseGuards,
   UseInterceptors,
   Req,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { UserService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { AuthGuard } from '../auth/guards/auth.guard';
 import { Request , Response} from 'express';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 
 @Controller('users')
+@AuthDecorator()
 @UseInterceptors(ResponseFormatInterceptor)
 @ApiTags('Users (custome Tag)')
-@UseGuards(AuthGuard)
 export class UsersController {
   constructor(private readonly userService: UserService) {}
 

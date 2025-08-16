@@ -11,6 +11,7 @@ import { UserEntity } from '../users/entities/user.entity';
 import { TvCommentEntity } from './entities/tvComment.entity';
 import { TvCommentService } from './comment.service';
 import { TvCommentController } from './coment.controller';
+import { AdminTvCommentController } from './adminComent.controller';
 import { UploadModule } from '../upload/upload.module';
 import { S3Service } from '../s3/s3.service';
 
@@ -22,7 +23,7 @@ import { S3Service } from '../s3/s3.service';
     UploadModule,
     TypeOrmModule.forFeature([TvEntity, TvCatEntity, UserEntity, TvCommentEntity]),
   ],
-  controllers: [AdminTvController,TvController, TvCommentController],
+  controllers: [AdminTvController, TvController, TvCommentController, AdminTvCommentController],
   providers: [TvService,  TvCommentService , S3Service],
 })
 export class TvModule implements NestModule{

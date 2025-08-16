@@ -8,6 +8,7 @@ import { Request } from 'express';
 import { AuthService } from '../auth.service';
 import { Reflector } from '@nestjs/core';
 import { SKIP_AUTH } from 'src/common/decorators/skip-auth.decorator';
+import { REQUIRE_ADMIN } from 'src/common/decorators/require-admin.decorator';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -24,9 +25,22 @@ export class AuthGuard implements CanActivate {
     if (isSkippedAuthorization) {
       return true;
     }
+
     const request: Request = context.switchToHttp().getRequest<Request>();
     const token = this.extractToken(request);
-    request.user = await this.authService.validateToken(token, 'access');
+
+    const user = await this.authService.validateToken(token, 'access');
+
+    const requireAdmin = this.reflector.get<boolean>(
+      REQUIRE_ADMIN,
+      context.getHandler(),
+    );
+
+    if (requireAdmin && !user.isAdmin) {
+      throw new ForbiddenException('دسترسی این بخش فقط برای ادمین مجاز است');
+    }
+
+    request.user = user;
     return true;
   }
 

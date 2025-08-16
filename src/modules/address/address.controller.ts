@@ -2,12 +2,14 @@ import { Controller, Get, Post, Body, Put, Param, Delete, Query, ParseIntPipe ,U
 import { ApiConsumes, ApiTags } from '@nestjs/swagger';
 
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { AddressService } from './address.service';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
 
 @Controller('addresses')
+@AuthDecorator()
 @UseInterceptors(ResponseFormatInterceptor)
 @ApiTags('Addresses')
 export class AddressController {

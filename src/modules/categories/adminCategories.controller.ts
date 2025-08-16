@@ -8,15 +8,10 @@ import {
   Delete,
   Version,
   Query,
-  DefaultValuePipe,
-  ParseIntPipe,
   UseInterceptors,
-  UploadedFiles,
-  ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
 } from '@nestjs/common';
 
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { AdminCategoriesService } from './adminCategories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -27,6 +22,7 @@ import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Controller('admin/categories')
+@AuthDecorator()
 @UseInterceptors(ResponseFormatInterceptor)
 @ApiTags('Admin Categories')
 export class AdminCategoriesController {

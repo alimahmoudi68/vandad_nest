@@ -5,21 +5,17 @@ import {
   Body,
   Param,
   Delete,
-  UseGuards,
   UseInterceptors,
   Query,
   Version,
-  Put,
 } from '@nestjs/common';
-import { ApiTags, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiQuery } from '@nestjs/swagger';
 
 import { TvService } from './tv.service';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
-import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { GetTvQuery } from './dto/get-tv.dto';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
-import { FilterBlog } from 'src/common/decorators/filterBlog.decorator';
-import { FilterBlogDto } from 'src/common/dto/filterBlog.dto';
 
 @ApiTags('Tv')
 @Controller('tvs')
@@ -27,15 +23,21 @@ import { FilterBlogDto } from 'src/common/dto/filterBlog.dto';
 export class TvController {
   constructor(private readonly tvService: TvService) {}
 
-  @Pagination()
-  @FilterBlog()
   @Version('1')
   @Get()
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({ name: 'q', required: false, type: String, example: 'nestjs' })
+  @ApiQuery({ name: 'cat', required: false, type: String, example: 'tech' })
   findAll(
-    @Query() paginationDto: PaginationDto,
-    @Query() filterBlogDto: FilterBlogDto,
+    @Query() getBlogQuery: GetTvQuery,
   ) {
-    return this.tvService.findAll(paginationDto, filterBlogDto);
+    const { page, limit, ...filterTvDto } = getBlogQuery;
+    const paginationDto: PaginationDto = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 10,
+    };
+    return this.tvService.findAll(paginationDto, filterTvDto);
   }
 
   @Get(':slug')

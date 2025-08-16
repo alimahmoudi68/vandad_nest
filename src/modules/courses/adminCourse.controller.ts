@@ -1,7 +1,7 @@
-import { Controller, Post, Body, Get, UseInterceptors, UseGuards, Version, Query, Param, Put, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseInterceptors, Version, Query, Param, Put, Delete } from '@nestjs/common';
 
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
-import { AuthGuard } from '../auth/guards/auth.guard';
 import { CourseService } from './course.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -13,9 +13,9 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 
 @ApiTags('Admin Course')
+@AuthDecorator({isAdmin: true})
 @Controller('admin/courses')
 @UseInterceptors(ResponseFormatInterceptor)
-@UseGuards(AuthGuard)
 @ApiBearerAuth("Authorization")
 export class AdminCourseController {
   constructor(private readonly courseService: CourseService) {}

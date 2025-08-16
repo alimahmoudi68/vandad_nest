@@ -1,18 +1,17 @@
-import { Controller, Post, Body, Put, Param, Delete, ParseIntPipe, UseInterceptors, Version, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Put, Param, Delete, ParseIntPipe, UseInterceptors, Version } from '@nestjs/common';
 
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
-import { AuthGuard } from '../auth/guards/auth.guard';
 import { EpisodeService } from './episode.service';
 import { CreateEpisodeDto } from './dto/create-episode.dto';
 import { UpdateEpisodeDto } from './dto/update-episode.dto';
-import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
 
 @ApiTags('Admin Episodes')
+@AuthDecorator()
 @Controller('admin/episodes')
 @UseInterceptors(ResponseFormatInterceptor)
-@UseGuards(AuthGuard)
-@ApiBearerAuth("Authorization")
 export class EpisodeController {
   constructor(private readonly episodeService: EpisodeService) {}
 

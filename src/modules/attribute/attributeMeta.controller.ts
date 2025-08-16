@@ -2,12 +2,13 @@ import { Controller, Get, Post, Body, Param, Put, Delete, UseInterceptors, Versi
 import { AttributeMetaService } from './attributeMeta.service';
 import { ApiTags } from '@nestjs/swagger';
 
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import {CreateAttributeMetaDto} from './dto/create-attributeMeta.dto';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 import { Pagination } from 'src/common/decorators/pagination.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
-
+@AuthDecorator()
 @Controller('admin/attribute-metas')
 @UseInterceptors(ResponseFormatInterceptor)
 @ApiTags('Attribute Metas')

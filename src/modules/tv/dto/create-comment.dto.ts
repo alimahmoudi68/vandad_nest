@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import {  IsNumberString, IsOptional, Length } from "class-validator";
+import {  IsNumber, IsOptional, Length } from "class-validator";
 
 export class CreateCommentDto{
     
@@ -8,11 +8,11 @@ export class CreateCommentDto{
     content: string
 
     @ApiPropertyOptional()
-    @IsNumberString()
+    @IsNumber()
     @IsOptional()
     parentId: number
 
     @ApiProperty()
-    @IsNumberString()
+    @IsNumber()
     tvId: number
 }

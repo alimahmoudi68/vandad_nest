@@ -6,7 +6,7 @@ export class CreateBlogDto {
 
     @ApiProperty({example: "عنوان مقاله"})
     @IsNotEmpty({message: "عنوان مقاله را وارد کنید"})
-    @Length(3,50,{message : "عنوان مقاله باید بین ۳ و ۵۰ کاراکتر باشد"})
+    @Length(3,300,{message : "عنوان مقاله باید بین ۳ و ۳۰۰ کاراکتر باشد"})
     title: string
 
     @ApiProperty({example: ""})
@@ -23,7 +23,7 @@ export class CreateBlogDto {
     content: string
 
     @ApiProperty()
-    @Length(3,50,{message : "عنوان مقاله باید بین ۳ و ۵۰ کاراکتر باشد"})
+    @Length(3,300,{message : "عنوان مقاله باید بین ۳ و ۳۰۰ کاراکتر باشد"})
     slug: string
 
     @ApiProperty({type : "integer" , isArray: true})

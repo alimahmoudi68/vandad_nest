@@ -25,8 +25,8 @@ export class AuthController {
   @Post('/otp')
   @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
   @Version('1')
-  async sendOtp(@Body() sendOtpDto: SendOtpDto) {
-    return await this.authService.sendOtp(sendOtpDto);
+  sendOtp(@Body() sendOtpDto: SendOtpDto) {
+    return this.authService.sendOtp(sendOtpDto);
   }
 
   @Post('/verify')

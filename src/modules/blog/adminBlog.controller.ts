@@ -1,10 +1,10 @@
-import { Controller, Get, Post, Body, Param, Delete , UseGuards, UseInterceptors, Query, Version, Put, } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete , UseInterceptors, Query, Version, Put, } from '@nestjs/common';
 
 import { BlogService } from './blog.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
-import { ApiTags , ApiBearerAuth, ApiConsumes, ApiQuery } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/guards/auth.guard';
+import { ApiTags , ApiConsumes, ApiQuery } from '@nestjs/swagger';
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
@@ -13,8 +13,7 @@ import { GetBlogDto } from './dto/get-blog.dto';
 
 @ApiTags('Admin Blog')
 @Controller('admin/blog')
-@UseGuards(AuthGuard)
-@ApiBearerAuth("Authorization")
+@AuthDecorator({isAdmin: true})
 @UseInterceptors(ResponseFormatInterceptor)
 export class AdminBlogController {
   constructor(private readonly blogService: BlogService) {}

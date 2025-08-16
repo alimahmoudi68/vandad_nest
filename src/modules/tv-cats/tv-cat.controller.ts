@@ -7,12 +7,12 @@ import {
   Delete,
   Version,
   UseInterceptors,
-  UseGuards,
   Put
 } from '@nestjs/common';
 import { ApiTags, ApiConsumes } from '@nestjs/swagger';
 
-import { AuthGuard } from '../auth/guards/auth.guard';
+
+import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 import { TvCategoryService } from './tv-cat.service';
 import { CreateTvCatDto } from './dto/create-tv-cat.dto';
@@ -20,7 +20,7 @@ import { UpdateTvCatDto } from './dto/update-tv-cat.dto';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
 
 @ApiTags('Admin Tv Cats')
-@UseGuards(AuthGuard)
+@AuthDecorator()
 @UseInterceptors(ResponseFormatInterceptor)
 @Controller('admin/tv-cats')
 export class TvCategoryController {

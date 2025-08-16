@@ -14,7 +14,6 @@ import { In, Repository } from 'typeorm';
 import { CreateTvDto } from './dto/create-tv.dto';
 import { UpdateTvDto } from './dto/update-tv.dto';
 import { TvEntity } from './entities/tv.entity';
-import { UserEntity } from '../users/entities/user.entity';
 import { TvCatEntity } from '../tv-cats/entities/tv-cat.entity';
 import { TvStatus } from './enum/status.enum';
 import { randomId } from 'src/utils/common/randomId';
@@ -32,8 +31,6 @@ export class TvService {
     private tvRepository: Repository<TvEntity>,
     @InjectRepository(UploadEntity)
     private readonly uploadRepository: Repository<UploadEntity>,
-    @InjectRepository(UserEntity)
-    private userRepository: Repository<UserEntity>,
     @InjectRepository(TvCatEntity)
     private tvCategoryRepository: Repository<TvCatEntity>,
     @Inject(REQUEST) private request: Request,
