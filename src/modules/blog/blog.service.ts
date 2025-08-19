@@ -334,7 +334,7 @@ export class BlogService {
 
     const commentData = await this.blogCommentService.findCommentsOfBlog(
       blog.id,
-      { page: 1, limit: 10 },
+      { page: 1, limit: 100 },
     );
 
     // let isLiked = false;
