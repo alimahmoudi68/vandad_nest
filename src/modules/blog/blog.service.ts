@@ -103,7 +103,7 @@ export class BlogService {
     if (cat) {
       cat = cat.toLocaleLowerCase();
       if (where.length > 0) where += ' AND ';
-      where += 'category.title = LOWER(:cat)';
+      where += 'category.slug = LOWER(:cat)';
     }
 
     const [blogs, count] = await this.blogRepository

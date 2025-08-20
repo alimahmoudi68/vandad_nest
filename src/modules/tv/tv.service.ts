@@ -100,7 +100,7 @@ export class TvService {
     if (cat) {
       cat = cat.toLocaleLowerCase();
       if (where.length > 0) where += ' AND ';
-      where += 'category.title = LOWER(:cat)';
+      where += 'category.slug = LOWER(:cat)';
     }
 
     const [tvs, count] = await this.tvRepository

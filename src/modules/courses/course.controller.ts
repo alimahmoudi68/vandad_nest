@@ -12,20 +12,11 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 
 
-@ApiTags('Admin Courses')
-@AuthDecorator({isAdmin: true})
-@Controller('admin/courses')
+@ApiTags('Courses')
+@Controller('courses')
 @UseInterceptors(ResponseFormatInterceptor)
-@ApiBearerAuth("Authorization")
-export class AdminCourseController {
+export class CourseController {
   constructor(private readonly courseService: CourseService) {}
-
-  @Post()
-  @Version('1')
-  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
-  create(@Body() dto: CreateCourseDto) {
-    return this.courseService.create(dto);
-  }
 
   @Get()
   @Version('1')
@@ -49,17 +40,4 @@ export class AdminCourseController {
     return this.courseService.findOne(+id);
   }
 
-  @Put(':id')
-  @Version('1')
-  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
-  update(@Param('id') id: string, @Body() updateCourseDto: UpdateCourseDto) {
-    return this.courseService.update(+id, updateCourseDto);
-  }
-
-  @Delete(':id')
-  @Version('1')
-  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
-  remove(@Param('id') id: string) {
-    return this.courseService.remove(+id);
-  }
 }
