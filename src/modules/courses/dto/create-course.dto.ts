@@ -35,6 +35,10 @@ export class CreateCourseDto {
   @ApiProperty({type : "integer" , isArray: true})
   @IsArray({message: "دسته بندی ها باید یک آرایه از عدد باشد"})
   categories: number[] 
+
+
+  @ApiProperty({example: ""})
+  video: string
 }
 
 

@@ -268,7 +268,7 @@ export class TvService {
       .createQueryBuilder('tv')
       .leftJoin('tv.categories', 'category')
       .addSelect(['category.id', 'category.title'])
-      .where({ slug })
+      .where('tv.slug = :slug', { slug })
       .getOne();
 
     if (!tv) {

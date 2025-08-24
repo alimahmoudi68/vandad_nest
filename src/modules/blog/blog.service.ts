@@ -24,8 +24,6 @@ import { BlogCommentService } from './comment.service';
 import { UploadEntity } from '../upload/entities/upload.entity';
 import { S3Service } from '../s3/s3.service';
 
-
-
 @Injectable({ scope: Scope.REQUEST })
 export class BlogService {
   constructor(
@@ -39,11 +37,19 @@ export class BlogService {
     private blogCategoryRepository: Repository<BlogCatEntity>,
     @Inject(REQUEST) private request: Request,
     private blogCommentService: BlogCommentService,
-    private s3Service: S3Service
+    private s3Service: S3Service,
   ) {}
 
   async create(createBlogDto: CreateBlogDto) {
-    let { title, keywords_meta, description_meta , slug, content, categories, image } = createBlogDto;
+    let {
+      title,
+      keywords_meta,
+      description_meta,
+      slug,
+      content,
+      categories,
+      image,
+    } = createBlogDto;
 
     // بررسی اینکه بلاگ با این slug قبلاً وجود دارد یا نه
     const blogExists = await this.checkBlogBySlug(slug);
@@ -60,7 +66,7 @@ export class BlogService {
 
     let uploadEntity: UploadEntity | null = null;
     if (image) {
-      console.log('32')
+      console.log('32');
       uploadEntity = await this.uploadRepository.findOneBy({
         id: image,
       });
@@ -155,100 +161,103 @@ export class BlogService {
   }
 
   async findOne(id: number) {
-    const blog = await this.blogRepository.findOne({ 
-      where : { id } ,
-      relations : {
-        categories : true ,
-        image : true
-      } 
+    const blog = await this.blogRepository.findOne({
+      where: { id },
+      relations: {
+        categories: true,
+        image: true,
+      },
     });
     if (!blog) {
       throw new BadRequestException('مقاله پیدا پیدا نشد');
     }
-    return {blog};
+    return { blog };
   }
 
- async update(id: number, updateBlogDto: UpdateBlogDto) {
-  let {
-    title,
-    keywords_meta,
-    description_meta,
-    slug,
-    content,
-    categories,
-    image,
-  } = updateBlogDto;
+  async update(id: number, updateBlogDto: UpdateBlogDto) {
+    let {
+      title,
+      keywords_meta,
+      description_meta,
+      slug,
+      content,
+      categories,
+      image,
+    } = updateBlogDto;
 
-  let blog = await this.blogRepository.findOne({
-    where: { id },
-    relations: ['image'],
-  });
+    let blog = await this.blogRepository.findOne({
+      where: { id },
+      relations: ['image'],
+    });
 
-  if (!blog) {
-    throw new NotFoundException('مقاله مورد نظر یافت نشد');
-  }
-
-  const selectedCategories = await this.blogCategoryRepository.findBy({
-    id: In(categories || []),
-  });
-
-  if (title) blog.title = title;
-  if (keywords_meta) blog.keywords_meta = keywords_meta;
-  if (description_meta) blog.description_meta = description_meta;
-
-  if (slug) {
-    const blogSameSlug = await this.checkBlogBySlug(slug);
-    if (blogSameSlug && blogSameSlug.id !== id) {
-      blog.slug = slug += `-${randomId()}`;
-    } else {
-      blog.slug = slug;
-    }
-  }
-
-  if (content) blog.content = content;
-  if (categories) blog.categories = selectedCategories;
-
-  let previousImage: UploadEntity | null = null;
-
-  if (image && (!blog.image || blog.image.id !== image)) {
-    previousImage = blog.image;
-
-    const newImage = await this.uploadRepository.findOneBy({ id: image });
-    if (!newImage) {
-      throw new NotFoundException('تصویر جدید یافت نشد');
+    if (!blog) {
+      throw new NotFoundException('مقاله مورد نظر یافت نشد');
     }
 
-    blog.image = newImage;
-  }
+    const selectedCategories = await this.blogCategoryRepository.findBy({
+      id: In(categories || []),
+    });
 
-  // ذخیره مقاله با تصویر جدید
-  await this.blogRepository.save(blog);
+    if (title) blog.title = title;
+    if (keywords_meta) blog.keywords_meta = keywords_meta;
+    if (description_meta) blog.description_meta = description_meta;
 
-  // حذف تصویر قبلی بعد از قطع ارتباط
-  if (previousImage) {
-    const previousImageRecord = await this.uploadRepository.findOneBy({ id: previousImage.id });
-    if (previousImageRecord) {
-      await this.s3Service.deleteFile(previousImageRecord.location);
-      await this.uploadRepository.delete(previousImageRecord.id);
+    if (slug) {
+      const blogSameSlug = await this.checkBlogBySlug(slug);
+      if (blogSameSlug && blogSameSlug.id !== id) {
+        blog.slug = slug += `-${randomId()}`;
+      } else {
+        blog.slug = slug;
+      }
     }
+
+    if (content) blog.content = content;
+    if (categories) blog.categories = selectedCategories;
+
+    let previousImage: UploadEntity | null = null;
+
+    if (image && (!blog.image || blog.image.id !== image)) {
+      previousImage = blog.image;
+
+      const newImage = await this.uploadRepository.findOneBy({ id: image });
+      if (!newImage) {
+        throw new NotFoundException('تصویر جدید یافت نشد');
+      }
+
+      blog.image = newImage;
+    }
+
+    // ذخیره مقاله با تصویر جدید
+    await this.blogRepository.save(blog);
+
+    // حذف تصویر قبلی بعد از قطع ارتباط
+    if (previousImage) {
+      const previousImageRecord = await this.uploadRepository.findOneBy({
+        id: previousImage.id,
+      });
+      if (previousImageRecord) {
+        await this.s3Service.deleteFile(previousImageRecord.location);
+        await this.uploadRepository.delete(previousImageRecord.id);
+      }
+    }
+
+    return {
+      message: 'مقاله با موفقیت ویرایش شد',
+    };
   }
-
-  return {
-    message: 'مقاله با موفقیت ویرایش شد',
-  };
-}
-
 
   async remove(id: number) {
     let blog = await this.blogRepository.findOne({
       where: { id },
-      relations: ['image'], 
+      relations: ['image'],
     });
     if (!blog) {
       throw new NotFoundException('مقاله مورد نظر پیدا نشد');
     }
     if (blog.image) {
-      const previousImage = await this.uploadRepository.findOneBy({ id: blog.image.id });
+      const previousImage = await this.uploadRepository.findOneBy({
+        id: blog.image.id,
+      });
       if (previousImage) {
         await this.s3Service.deleteFile(previousImage.location);
         await this.uploadRepository.delete(previousImage.id);

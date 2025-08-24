@@ -1,4 +1,16 @@
-import { Controller, Post, Body, Get, UseInterceptors, Version, Query, Param, Put, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  UseInterceptors,
+  Version,
+  Query,
+  Param,
+  Put,
+  Delete,
+  ParseIntPipe,
+} from '@nestjs/common';
 
 import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
@@ -9,8 +21,6 @@ import { ApiBearerAuth, ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
 import { GetCourseDto } from './dto/get-course.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-
-
 
 @ApiTags('Courses')
 @Controller('courses')
@@ -33,11 +43,10 @@ export class CourseController {
     return this.courseService.findAll(paginationDto, filterBlogDto);
   }
 
-  @Get(':id')
+  @Get(':slug')
   @Version('1')
   @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
-  findOne(@Param('id') id: string) {
-    return this.courseService.findOne(+id);
+  findOne(@Param('slug') slug: string) {
+    return this.courseService.findOneDetail(slug);
   }
-
 }

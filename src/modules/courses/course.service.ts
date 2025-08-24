@@ -1,7 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-
 
 import { CourseCatEntity } from '../course-cats/entities/course-cat.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
@@ -12,6 +15,7 @@ import { CourseEntity } from './entities/course.entity';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { UploadEntity } from '../upload/entities/upload.entity';
+import { CourseCommentService } from './comment.service';
 import { S3Service } from '../s3/s3.service';
 
 @Injectable()
@@ -23,13 +27,22 @@ export class CourseService {
     private readonly uploadRepository: Repository<UploadEntity>,
     @InjectRepository(CourseCatEntity)
     private courseCategoryRepository: Repository<CourseCatEntity>,
-    private s3Service: S3Service
+    private courseCommentService: CourseCommentService,
+
+    private s3Service: S3Service,
   ) {}
 
   async create(dto: CreateCourseDto) {
-
-    let { title, keywords_meta, description_meta , slug, content, image , categories } = dto;
-
+    let {
+      title,
+      keywords_meta,
+      description_meta,
+      slug,
+      content,
+      image,
+      categories,
+      video
+    } = dto;
 
     const courseExists = await this.checkCourseBySlug(slug);
     if (courseExists) {
@@ -39,7 +52,6 @@ export class CourseService {
     const selectedCategories = await this.courseCategoryRepository.findBy({
       id: In(categories || []),
     });
-
 
     let uploadEntity: UploadEntity | null = null;
     if (image) {
@@ -56,6 +68,7 @@ export class CourseService {
       content,
       categories: selectedCategories,
       image: uploadEntity || undefined,
+      video
     });
 
     await this.courseRepo.save(course);
@@ -63,78 +76,78 @@ export class CourseService {
     return {
       message: 'دوره جدید با موفقیت ثبت شد',
     };
-
-   
   }
 
   async findAll(paginationDto: PaginationDto, filterBlogDto: FilterBlogDto) {
-      const { page, limit, skip } = paginationSolver(paginationDto);
-      let { cat, q } = filterBlogDto;
-      let where = '';
-      if (q) {
-        if (where.length > 0) where += ' AND ';
-        q = `%${q}%`;
-        where += 'LOWER(CONCAT(course.title , course.content)) LIKE :q'; // البته چون  ای لایک است لازم نیست لاور کیس کنیم
-      }
-      if (cat) {
-        cat = cat.toLocaleLowerCase();
-        if (where.length > 0) where += ' AND ';
-        where += 'category.title = LOWER(:cat)';
-      }
-      const [courses, count] = await this.courseRepo
-        .createQueryBuilder('course')
-        .leftJoin('course.categories', 'category')
-        .leftJoin('course.image', 'image')
-        .leftJoin('course.episodes', 'episodes')
-        .addSelect([
-          'category.id',
-          'category.title',
-          'image.bucket',
-          'image.location',
-          'episodes.id',
-          'episodes.title',
-          'episodes.content',
-          'episodes.price',
-          'episodes.date',
-          'episodes.time',
-        ])
-        .where(where, { cat, q })
-        .loadRelationIdAndMap(
-          'course.comments',
-          'course.comments',
-          'comments',
-          (qb) => qb.where('comments.accepted = :accepted', { accepted: true }),
-        )
-        .orderBy('course.id', 'DESC')
-        .skip(skip)
-        .take(limit)
-        .getManyAndCount();
-  
-      return {
-        courses,
-        pagination: {
-          count,
-          page,
-          limit,
-        },
-      };
+    const { page, limit, skip } = paginationSolver(paginationDto);
+    let { cat, q } = filterBlogDto;
+    let where = '';
+    if (q) {
+      if (where.length > 0) where += ' AND ';
+      q = `%${q}%`;
+      where += 'LOWER(CONCAT(course.title , course.content)) LIKE :q'; // البته چون  ای لایک است لازم نیست لاور کیس کنیم
+    }
+    if (cat) {
+      cat = cat.toLocaleLowerCase();
+      if (where.length > 0) where += ' AND ';
+      where += 'category.slug = LOWER(:cat)';
+    }
+    const [courses, count] = await this.courseRepo
+      .createQueryBuilder('course')
+      .leftJoin('course.categories', 'category')
+      .leftJoin('course.image', 'image')
+      .leftJoin('course.episodes', 'episodes')
+      .addSelect([
+        'category.id',
+        'category.title',
+        'image.bucket',
+        'image.location',
+        'episodes.id',
+        'episodes.title',
+        'episodes.content',
+        'episodes.price',
+        'episodes.date',
+        'episodes.time',
+      ])
+      .where(where, { cat, q })
+      .loadRelationIdAndMap(
+        'course.comments',
+        'course.comments',
+        'comments',
+        (qb) => qb.where('comments.accepted = :accepted', { accepted: true }),
+      )
+      .orderBy('course.id', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      courses,
+      pagination: {
+        count,
+        page,
+        limit,
+      },
+    };
   }
 
-
   async findOne(id: number) {
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BadRequestException('شناسه دوره نامعتبر است');
+    }
     const course = await this.courseRepo
-    .createQueryBuilder('course')
-    .leftJoinAndSelect('course.categories', 'categories')
-    .leftJoinAndSelect('course.image', 'image')
-    .leftJoinAndSelect('course.episodes', 'episodes')
-    .where('course.id = :id', { id })
-    .orderBy('episodes.id', 'ASC') // ترتیب قدیمی به جدید (بر اساس date)
-    .getOne();
+      .createQueryBuilder('course')
+      .leftJoinAndSelect('course.categories', 'categories')
+      .leftJoinAndSelect('course.image', 'image')
+      .leftJoinAndSelect('course.episodes', 'episodes')
+      .where('course.id = :id', { id })
+      .orderBy('episodes.id', 'ASC') // ترتیب قدیمی به جدید (بر اساس date)
+      .getOne();
 
     if (!course) {
       throw new BadRequestException('دوره پیدا نشد');
     }
-    return {course};
+    return { course };
   }
 
   async checkCourseBySlug(slug: string) {
@@ -153,87 +166,127 @@ export class CourseService {
       content,
       categories,
       image,
+      video
     } = updateCourseDto;
-  
-    let blog = await this.courseRepo.findOne({
+
+    let course = await this.courseRepo.findOne({
       where: { id },
       relations: ['image'],
     });
-  
-    if (!blog) {
+
+    if (!course) {
       throw new NotFoundException('مقاله مورد نظر یافت نشد');
     }
-  
+
     const selectedCategories = await this.courseCategoryRepository.findBy({
       id: In(categories || []),
     });
-  
-    if (title) blog.title = title;
-    if (keywords_meta) blog.keywords_meta = keywords_meta;
-    if (description_meta) blog.description_meta = description_meta;
-  
+
+    if (title) course.title = title;
+    if (keywords_meta) course.keywords_meta = keywords_meta;
+    if (description_meta) course.description_meta = description_meta;
+
     if (slug) {
-      const blogSameSlug = await this.checkCourseBySlug(slug);
-      if (blogSameSlug && blogSameSlug.id !== id) {
-        blog.slug = slug += `-${randomId()}`;
+      const courseSameSlug = await this.checkCourseBySlug(slug);
+      if (courseSameSlug && courseSameSlug.id !== id) {
+        course.slug = slug += `-${randomId()}`;
       } else {
-        blog.slug = slug;
+        course.slug = slug;
       }
     }
-  
-    if (content) blog.content = content;
-    if (categories) blog.categories = selectedCategories;
-  
+
+    if (content) course.content = content;
+    if (video) course.video = video;
+    if (categories) course.categories = selectedCategories;
+
     let previousImage: UploadEntity | null = null;
-  
-    if (image && (!blog.image || blog.image.id !== image)) {
-      previousImage = blog.image;
-  
+
+    if (image && (!course.image || course.image.id !== image)) {
+      previousImage = course.image;
+
       const newImage = await this.uploadRepository.findOneBy({ id: image });
       if (!newImage) {
         throw new NotFoundException('تصویر جدید یافت نشد');
       }
-  
-      blog.image = newImage;
+
+      course.image = newImage;
     }
-  
+
     // ذخیره مقاله با تصویر جدید
-    await this.courseRepo.save(blog);
-  
+    await this.courseRepo.save(course);
+
     // حذف تصویر قبلی بعد از قطع ارتباط
     if (previousImage) {
-      const previousImageRecord = await this.uploadRepository.findOneBy({ id: previousImage.id });
+      const previousImageRecord = await this.uploadRepository.findOneBy({
+        id: previousImage.id,
+      });
       if (previousImageRecord) {
         await this.s3Service.deleteFile(previousImageRecord.location);
         await this.uploadRepository.delete(previousImageRecord.id);
       }
     }
-  
+
     return {
-      message: 'مقاله با موفقیت ویرایش شد',
+      message: 'دوره با موفقیت ویرایش شد',
     };
   }
-  
-  
-    async remove(id: number) {
-      let blog = await this.courseRepo.findOne({
-        where: { id },
-        relations: ['image'], 
+
+
+  async remove(id: number) {
+    let blog = await this.courseRepo.findOne({
+      where: { id },
+      relations: ['image'],
+    });
+    if (!blog) {
+      throw new NotFoundException('دوره مورد نظر پیدا نشد');
+    }
+    if (blog.image) {
+      const previousImage = await this.uploadRepository.findOneBy({
+        id: blog.image.id,
       });
-      if (!blog) {
-        throw new NotFoundException('دوره مورد نظر پیدا نشد');
+      if (previousImage) {
+        await this.s3Service.deleteFile(previousImage.location);
+        await this.uploadRepository.delete(previousImage.id);
       }
-      if (blog.image) {
-        const previousImage = await this.uploadRepository.findOneBy({ id: blog.image.id });
-        if (previousImage) {
-          await this.s3Service.deleteFile(previousImage.location);
-          await this.uploadRepository.delete(previousImage.id);
-        }
-      }
-      await this.courseRepo.delete({ id });
-      return {
-        message: 'دوره با موفقیت حذف شد',
-      };
+    }
+    await this.courseRepo.delete({ id });
+    return {
+      message: 'دوره با موفقیت حذف شد',
+    };
+  }
+
+  async findOneDetail(slug: string) {
+    const course = await this.courseRepo
+      .createQueryBuilder('course')
+      .leftJoin('course.categories', 'category')
+      .leftJoin('course.image', 'image')
+      .leftJoin('course.episodes', 'episode')
+      .addSelect([
+        'category.id',
+        'category.title',
+        'image.bucket',
+        'image.location',
+        'episode.title',
+        'episode.content' ,
+        'episode.price' ,
+        'episode.time' ,
+        'episode.date' ,
+      ])
+      .where({slug})
+      .getOne();
+
+    if (!course) {
+      throw new NotFoundException('مقاله یافت نشد');
     }
 
+    const commentData = await this.courseCommentService.findCommentsOfCourse(
+      course.id,
+      { page: 1, limit: 100 },
+    );
+
+    return {
+      course,
+      commentData,
+    };
+  }
 }

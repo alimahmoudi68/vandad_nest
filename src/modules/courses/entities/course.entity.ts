@@ -40,6 +40,9 @@ export class CourseEntity {
   })
   categories: CourseCatEntity[];
 
+  @Column({ nullable: true, type: 'text'})
+  video?: string;
+
   @OneToMany(() => CourseCommentEntity, (courseComment) => courseComment.course)
   comments: CourseCommentEntity[];
 

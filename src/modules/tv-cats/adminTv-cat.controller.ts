@@ -19,10 +19,11 @@ import { CreateTvCatDto } from './dto/create-tv-cat.dto';
 import { UpdateTvCatDto } from './dto/update-tv-cat.dto';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
 
-@ApiTags('Tv Cats')
+@ApiTags('Admin Tv Cats')
+@AuthDecorator()
 @UseInterceptors(ResponseFormatInterceptor)
-@Controller('tv-cats')
-export class TvCategoryController {
+@Controller('admin/tv-cats')
+export class AdminTvCategoryController {
   constructor(private readonly tvCategoryService: TvCategoryService) {}
 
   @Post()

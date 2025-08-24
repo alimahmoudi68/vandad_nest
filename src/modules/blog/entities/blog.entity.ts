@@ -34,7 +34,7 @@ export class BlogEntity {
   @Column({ nullable: false, unique: true })
   slug: string;
   
-  @Column({ type: 'text', charset: 'utf8mb4', collation: 'utf8mb4_unicode_ci' })
+  @Column({ type: 'longtext', charset: 'utf8mb4', collation: 'utf8mb4_unicode_ci' })
   content: string;
   
   @ManyToOne(() => UploadEntity, { nullable: true , onDelete: 'SET NULL', onUpdate: 'CASCADE'})

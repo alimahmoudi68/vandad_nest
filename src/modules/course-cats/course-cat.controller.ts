@@ -18,10 +18,9 @@ import { CreateCourseCatDto } from './dto/create-course-cat.dto';
 import { UpdateCourseCatDto } from './dto/update-course-cat.dto';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
 
-@ApiTags('Admin Course Cats')
-@AuthDecorator()
+@ApiTags('Course Cats')
 @UseInterceptors(ResponseFormatInterceptor)
-@Controller('admin/course-cats')
+@Controller('course-cats')
 export class CourseCategoryController {
   constructor(private readonly courseCategoryService: CourseCategoryService) {}
 

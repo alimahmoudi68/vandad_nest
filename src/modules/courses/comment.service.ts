@@ -17,7 +17,7 @@ import { Request } from 'express';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { paginationSolver } from 'src/utils/common/paginationSolver';
 import { CreateCommentDto } from './dto/create-comment.dto';
-import { CourseService } from './course.service';
+
 
 @Injectable({ scope: Scope.REQUEST })
 export class CourseCommentService {
@@ -28,7 +28,7 @@ export class CourseCommentService {
     private userRepository: Repository<UserEntity>,
     @InjectRepository(CourseCommentEntity)
     private courseCommentRepository: Repository<CourseCommentEntity>,
-    @Inject(forwardRef(() => CourseService)) private courseService: CourseService,
+
     @Inject(REQUEST) private request: Request,
   ) {}
 
@@ -37,7 +37,10 @@ export class CourseCommentService {
     const { id } = this.request.user!;
     let parent: CourseCommentEntity | null = null;
 
-    const course = await this.courseService.findOne(blogId);
+    const course = await this.courseRepository.findOneBy({ id: blogId });
+    if (!course) {
+      throw new BadRequestException('دوره یافت نشد');
+    }
     if (parentId && !isNaN(parentId)) {
       parent = await this.courseCommentRepository.findOneBy({ id: +parentId });
       if (!parent) {
@@ -54,7 +57,7 @@ export class CourseCommentService {
       content,
       accepted: false,
       parent: parentId ? { id: parentId } : undefined,
-      course: { id: course.course.id },
+      course: { id: course.id },
       user: { id: user.id },
     });
 
@@ -96,12 +99,12 @@ export class CourseCommentService {
     };
   }
 
-  async findCommentsOfBlog(blogId: number, paginationDto: PaginationDto) {
+  async findCommentsOfCourse(courseId: number, paginationDto: PaginationDto) {
     const { limit, page, skip } = paginationSolver(paginationDto);
 
     const [comments, count] = await this.courseCommentRepository.findAndCount({
       where: {
-        course: { id: blogId },
+        course: { id: courseId },
         parent: IsNull(),
       },
       relations: {

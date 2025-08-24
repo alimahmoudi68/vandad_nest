@@ -21,9 +21,6 @@ export class EpisodeEntity {
   @Column({ type: 'date' })
   date: Date;
 
-  @Column({ nullable: true, type: 'int' })
-  duration?: number;
-
   @ManyToOne(() => CourseEntity, course => course.episodes, { onDelete: 'CASCADE' })
   course: CourseEntity;
 }

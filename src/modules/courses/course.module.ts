@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CourseEntity } from './entities/course.entity';
 import { CourseService } from './course.service';
@@ -8,13 +8,24 @@ import { CourseController } from './course.controller';
 import { UploadModule } from '../upload/upload.module';
 import { S3Service } from '../s3/s3.service';
 import { CourseCatEntity } from '../course-cats/entities/course-cat.entity';
-
-
-
+import { CourseCommentService } from './comment.service';
+import { CourseCommentEntity } from './entities/courseComment.entity';
+import { UserEntity } from '../users/entities/user.entity';
+import { UploadEntity } from '../upload/entities/upload.entity';
 
 @Module({
-  imports: [AuthModule , UploadModule, TypeOrmModule.forFeature([CourseEntity, CourseCatEntity])],
-  providers: [CourseService , S3Service],
+  imports: [
+    AuthModule,
+    UploadModule,
+    TypeOrmModule.forFeature([
+      CourseEntity,
+      CourseCatEntity,
+      CourseCommentEntity,
+      UserEntity,
+      UploadEntity,
+    ]),
+  ],
+  providers: [CourseService, CourseCommentService, S3Service],
   controllers: [AdminCourseController, CourseController],
 })
 export class CourseModule {}
