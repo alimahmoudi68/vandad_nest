@@ -1,6 +1,9 @@
 import { Optional } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsNumber, IsNotEmpty, Length, IsArray } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsOptional, IsNumber, IsNotEmpty, Length, IsArray, ValidateNested } from 'class-validator';
+
+import { CreateFaqDto } from './create-faq.dto';
 
 export class CreateCourseDto {
   @ApiProperty({example: "عنوان دوره"})
@@ -31,6 +34,11 @@ export class CreateCourseDto {
   @IsNumber({}, { message: "آیدی تصویر بندانگشتی باید عدد باشد" })
   @ApiProperty({example: 1})
   image?: number;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => CreateFaqDto)
+  faqs?: CreateFaqDto[];
 
   @ApiProperty({type : "integer" , isArray: true})
   @IsArray({message: "دسته بندی ها باید یک آرایه از عدد باشد"})
