@@ -12,6 +12,7 @@ import { CourseCommentService } from './comment.service';
 import { CourseCommentEntity } from './entities/courseComment.entity';
 import { UserEntity } from '../users/entities/user.entity';
 import { UploadEntity } from '../upload/entities/upload.entity';
+import { CourseFaqEntity } from './entities/courseFaq.entity';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UploadEntity } from '../upload/entities/upload.entity';
       CourseCommentEntity,
       UserEntity,
       UploadEntity,
+      CourseFaqEntity
     ]),
   ],
   providers: [CourseService, CourseCommentService, S3Service],

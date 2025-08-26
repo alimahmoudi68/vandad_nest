@@ -1,23 +1,15 @@
 import {
   Controller,
-  Post,
-  Body,
   Get,
   UseInterceptors,
   Version,
   Query,
   Param,
-  Put,
-  Delete,
-  ParseIntPipe,
 } from '@nestjs/common';
 
-import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 import { CourseService } from './course.service';
-import { CreateCourseDto } from './dto/create-course.dto';
-import { UpdateCourseDto } from './dto/update-course.dto';
-import { ApiBearerAuth, ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
 import { GetCourseDto } from './dto/get-course.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';

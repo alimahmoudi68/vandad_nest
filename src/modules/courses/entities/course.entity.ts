@@ -4,7 +4,7 @@ import { CourseCatEntity } from 'src/modules/course-cats/entities/course-cat.ent
 import { EpisodeEntity } from '../../episodes/entities/episode.entity';
 import { UploadEntity } from 'src/modules/upload/entities/upload.entity';
 import { CourseCommentEntity } from './courseComment.entity';
-import { CourseFaq } from './courseFaq.entity';
+import { CourseFaqEntity } from './courseFaq.entity';
 
 
 @Entity('courses')
@@ -47,8 +47,8 @@ export class CourseEntity {
   @OneToMany(() => CourseCommentEntity, (courseComment) => courseComment.course)
   comments: CourseCommentEntity[];
 
-  @OneToMany(() => CourseFaq, (faq) => faq.course, { cascade: true })
-  faqs: CourseFaq[];
+  @OneToMany(() => CourseFaqEntity, (faq) => faq.course)
+  faqs: CourseFaqEntity[];
 
   @CreateDateColumn()
   created_at: Date;

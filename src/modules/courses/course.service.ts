@@ -17,6 +17,7 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 import { UploadEntity } from '../upload/entities/upload.entity';
 import { CourseCommentService } from './comment.service';
 import { S3Service } from '../s3/s3.service';
+import { CourseFaqEntity } from './entities/courseFaq.entity';
 
 @Injectable()
 export class CourseService {
@@ -25,6 +26,8 @@ export class CourseService {
     private courseRepo: Repository<CourseEntity>,
     @InjectRepository(UploadEntity)
     private readonly uploadRepository: Repository<UploadEntity>,
+    @InjectRepository(CourseFaqEntity)
+    private readonly courseFaqRepository: Repository<CourseFaqEntity>,
     @InjectRepository(CourseCatEntity)
     private courseCategoryRepository: Repository<CourseCatEntity>,
     private courseCommentService: CourseCommentService,
@@ -32,50 +35,86 @@ export class CourseService {
     private s3Service: S3Service,
   ) {}
 
+  
   async create(dto: CreateCourseDto) {
-    let {
+    const {
       title,
       keywords_meta,
       description_meta,
-      slug,
+      slug: rawSlug,
       content,
       image,
       categories,
-      video
+      video,
+      faqs,
     } = dto;
-
-    const courseExists = await this.checkCourseBySlug(slug);
-    if (courseExists) {
-      slug += `-${randomId()}`;
-    }
-
-    const selectedCategories = await this.courseCategoryRepository.findBy({
-      id: In(categories || []),
+  
+    // همه‌چیز داخل یک تراکنش تا نیمه‌کاره ذخیره نشه
+    return await this.courseRepo.manager.transaction(async (tm) => {
+      let slug = rawSlug;
+  
+      // یکتا کردن slug
+      const courseExists = await tm.getRepository(CourseEntity).exists({ where: { slug } });
+      if (courseExists) slug = `${slug}-${randomId()}`;
+  
+      // گرفتن کتگوری‌های معتبر
+      const catRepo = tm.getRepository(CourseCatEntity);
+      const selectedCategories = (Array.isArray(categories) && categories.length)
+        ? await catRepo.findBy({ id: In(categories) })
+        : [];
+  
+      // اگر ورودی کتگوری داشتیم ولی چیزی پیدا نشد، ارور بده (یا می‌تونی نادیده بگیری)
+      if ((categories?.length ?? 0) > 0 && selectedCategories.length === 0) {
+        throw new BadRequestException('هیچ دسته‌بندی معتبری پیدا نشد.');
+      }
+  
+      // تصویر انتخابی (nullable)
+      const uploadEntity = image
+        ? await tm.getRepository(UploadEntity).findOne({ where: { id: image } })
+        : null;
+  
+      // ساخت پیلود کورس بدون اسپرد DTO
+      const coursePayload: Partial<CourseEntity> = {
+        title,
+        slug,
+        keywords_meta,
+        description_meta,
+        content,
+        video,
+        image: uploadEntity || undefined,
+      };
+      // فقط اگر دسته‌بندی معتبر داریم ست کن (از ست‌کردن آرایه خالی هم اشکالی نیست، اما شرطی امن‌تره)
+      if (selectedCategories.length) {
+        coursePayload.categories = selectedCategories;
+      }
+  
+      // ساخت و ذخیره کورس
+      const courseRepo = tm.getRepository(CourseEntity);
+      const course = courseRepo.create(coursePayload);
+      const savedCourse = await courseRepo.save(course);
+  
+      // ساخت و ذخیره‌ی FAQها (فقط question و answer؛ هیچ فیلد دیگری را عبور نده)
+      if (Array.isArray(faqs) && faqs.length) {
+        const faqRepo = tm.getRepository(CourseFaqEntity);
+  
+        // فقط آیتم‌های معتبر را نگه دار
+        const cleanFaqs = faqs
+          .filter((f) => f && typeof f.question === 'string' && typeof f.answer === 'string')
+          .map((f) =>
+            faqRepo.create({
+              question: f.question.trim(),
+              answer: f.answer.trim(),
+              course: savedCourse,
+            }),
+          );
+  
+        if (cleanFaqs.length) {
+          await faqRepo.save(cleanFaqs);
+        }
+      }
+  
+      return { message: 'دوره جدید با موفقیت ثبت شد', id: savedCourse.id };
     });
-
-    let uploadEntity: UploadEntity | null = null;
-    if (image) {
-      uploadEntity = await this.uploadRepository.findOneBy({
-        id: image,
-      });
-    }
-
-    const course = this.courseRepo.create({
-      title,
-      slug,
-      keywords_meta,
-      description_meta,
-      content,
-      categories: selectedCategories,
-      image: uploadEntity || undefined,
-      video
-    });
-
-    await this.courseRepo.save(course);
-
-    return {
-      message: 'دوره جدید با موفقیت ثبت شد',
-    };
   }
 
   async findAll(paginationDto: PaginationDto, filterBlogDto: FilterBlogDto) {
@@ -140,6 +179,7 @@ export class CourseService {
       .leftJoinAndSelect('course.categories', 'categories')
       .leftJoinAndSelect('course.image', 'image')
       .leftJoinAndSelect('course.episodes', 'episodes')
+      .leftJoinAndSelect('course.faqs', 'faqs')
       .where('course.id = :id', { id })
       .orderBy('episodes.id', 'ASC') // ترتیب قدیمی به جدید (بر اساس date)
       .getOne();
@@ -166,13 +206,16 @@ export class CourseService {
       content,
       categories,
       image,
-      video
+      video,
+      faqs
     } = updateCourseDto;
+
 
     let course = await this.courseRepo.findOne({
       where: { id },
       relations: ['image'],
     });
+
 
     if (!course) {
       throw new NotFoundException('مقاله مورد نظر یافت نشد');
@@ -200,6 +243,32 @@ export class CourseService {
     if (categories) course.categories = selectedCategories;
 
     let previousImage: UploadEntity | null = null;
+
+    if (faqs !== undefined) {
+      // 1. پیدا کردن تمام FAQهای قبلی دوره
+      const existingFaqs = await this.courseFaqRepository.find({
+        where: { course: { id: course.id } },
+      });
+    
+      // 2. حذف همه FAQهای قبلی
+      if (existingFaqs.length > 0) {
+        await this.courseFaqRepository.remove(existingFaqs);
+      }
+    
+      // 3. اضافه کردن FAQهای جدید (اگر وجود دارند)
+      if (faqs.length > 0) {
+        const newFaqs = faqs.map(f =>
+          this.courseFaqRepository.create({
+            question: f.question,
+            answer: f.answer,
+            course: course,
+          }),
+        );
+        await this.courseFaqRepository.save(newFaqs);
+      }
+    }
+    
+    
 
     if (image && (!course.image || course.image.id !== image)) {
       previousImage = course.image;
@@ -261,6 +330,7 @@ export class CourseService {
       .leftJoin('course.categories', 'category')
       .leftJoin('course.image', 'image')
       .leftJoin('course.episodes', 'episode')
+      .leftJoin('course.faqs', 'faq')
       .addSelect([
         'category.id',
         'category.title',
@@ -271,6 +341,9 @@ export class CourseService {
         'episode.price' ,
         'episode.time' ,
         'episode.date' ,
+        'faq.id',
+        'faq.question',
+        'faq.answer',
       ])
       .where({slug})
       .getOne();
