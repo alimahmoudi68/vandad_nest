@@ -24,13 +24,6 @@ export class CreateProductDto {
     @ApiProperty({example: 'mobile-apple'})
     slug?: string;
 
-    @IsNumber({}, {message: "حداقل قیمت باید عدد باشد"})
-    @ApiProperty({example: 100000})
-    minPrice: number;
-
-    @IsNumber({}, {message: "حداکثر قیمت باید عدد باشد"})
-    @ApiProperty({example: 100000})
-    maxPrice: number;
 
     @IsOptional()
     @IsNumber({}, {message: "موجودی باید عدد باشد"})
@@ -56,48 +49,6 @@ export class CreateProductDto {
     @ApiProperty({type: String , isArray: true, example: [1]})
     categories: string[] | string 
 
-    @IsOptional()
-    @ApiProperty({ type: Boolean, default: false, example: false })
-    isVariant?: boolean;
-
-    @IsOptional()
-    @ApiProperty({ type: Object, description: 'ویژگی‌های محصول به صورت map از slug به مقدار یا آیدی', example: { color: 1 } })
-    attributes?: { [key: string]: string };
-
-    @IsOptional()
-    @ApiProperty({
-        type: 'array',
-        items: {
-            type: 'object',
-            properties: {
-                attributes: { type: 'object', additionalProperties: { type: 'string' } },
-                price: { type: 'number' },
-                stock: { type: 'number' },
-                sku: { type: 'string' }
-            }
-        },
-        description: 'لیست واریانت‌های محصول',
-        example: [
-            {
-                attributes: { color: '6822e5cf437c593be04b2ddc' },
-                price: 120000,
-                stock: 5,
-                sku: 'variant-sku-1'
-            },
-            {
-                attributes: { color: '6822e5d7437c593be04b2de5' },
-                price: 100000,
-                stock: 5,
-                sku: 'variant-sku-2'
-            }
-        ]
-    })
-    variants?: Array<{
-        attributes: { [key: string]: string },
-        price: number,
-        stock: number,
-        sku: string
-    }>;
 
     @IsOptional()
     @ApiProperty({ type: Boolean, default: false })

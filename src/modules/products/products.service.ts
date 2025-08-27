@@ -3,7 +3,6 @@ import { Repository } from 'typeorm';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 
-import { BookmarkDto } from './dto/bookmark.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductEntity } from './entities/product.entity';
 import { CategoryEntity } from '../categories/entities/category.entity';
@@ -45,7 +44,7 @@ export class ProductsService {
       where: {
         id,
       },
-      relations: ['categories', 'attributes', 'variants'],
+      relations: ['categories'],
     });
 
     if (!product) {
@@ -55,34 +54,4 @@ export class ProductsService {
     return product;
   }
 
-  async bookmark(bookmarkdtro: BookmarkDto) {
-    let { product_id } = bookmarkdtro;
-    const product = await this.productRepositor.findOneBy({ id: product_id });
-    if (!product) {
-      throw new NotFoundException('محصول پیدا نشد');
-    }
-
-    const user = await this.userRepository.findOne({
-      where: { id: this.request.user?.id },
-      relations: ['bookmarks'],
-    });
-
-    if (!user) {
-      throw new NotFoundException('کاربر پیدا نشد');
-    }
-
-    const alreadyBookmarked = user.bookmarks.some((p) => p.id === product.id);
-
-    if (alreadyBookmarked) {
-      // حذف از بوکمارک
-      user.bookmarks = user.bookmarks.filter((p) => p.id !== product.id);
-      await this.userRepository.save(user);
-      return 'بوکمارک حذف شد';
-    } else {
-      // اضافه به بوکمارک
-      user.bookmarks.push(product);
-      await this.userRepository.save(user);
-      return 'بوکمارک شد';
-    }
-  }
 }

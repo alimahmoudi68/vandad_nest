@@ -1,8 +1,6 @@
 import { ProductEntity } from "src/modules/products/entities/product.entity";
 import { Column, CreateDateColumn, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
-import { AttributeEntity } from '../../attribute/entities/attribute.entity';
-
 
 @Entity("categories")
 export class CategoryEntity {
@@ -25,8 +23,6 @@ export class CategoryEntity {
     @OneToMany(()=>CategoryEntity , (cat)=>cat.parent)
     childs: CategoryEntity[]
 
-    @ManyToMany(() => AttributeEntity, attribute => attribute.categories)
-    attributes: AttributeEntity[];
 
     @ManyToMany(()=>ProductEntity , (product)=>product.categories)
     products: ProductEntity[]

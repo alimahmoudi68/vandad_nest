@@ -5,10 +5,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductEntity } from './entities/product.entity';
 import { UploadModule } from '../upload/upload.module';
 import { CategoriesModule } from '../categories/categories.module';
-import { AttributeEntity } from '../attribute/entities/attribute.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ProductEntity, AttributeEntity]), UploadModule, CategoriesModule],
+  imports: [TypeOrmModule.forFeature([ProductEntity]), UploadModule, CategoriesModule],
   controllers: [AdminProductsController],
   providers: [AdminProductsService],
 })

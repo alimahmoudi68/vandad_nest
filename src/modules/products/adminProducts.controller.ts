@@ -37,12 +37,12 @@ export class AdminProductsController {
   @ApiConsumes(SwaggerConsumes.UrlEncoded , SwaggerConsumes.Json)
   @Pagination() 
   findAll(@Query() query: any) {
-    const { page, limit, ...attributeFilters } = query;
+    const { page, limit } = query;
     const paginationDto: PaginationDto = {
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 10,
     };
-    return this.productsService.findAll(paginationDto, attributeFilters);
+    return this.productsService.findAll(paginationDto);
   }
 
   @Get(':id')

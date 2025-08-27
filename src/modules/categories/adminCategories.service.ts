@@ -5,13 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CategoryEntity } from './entities/category.entity';
 import { ConflictMessage } from 'src/common/enums/messages.enum';
-import { AttributeService } from '../attribute/attribute.service';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { paginationSolver } from 'src/utils/common/paginationSolver';
 
@@ -20,11 +19,10 @@ export class AdminCategoriesService {
   constructor(
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
-    private readonly attributeService: AttributeService,
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto) {
-    let { title, slug, description, parent, attributes } = createCategoryDto;
+    let { title, slug, description, parent } = createCategoryDto;
     title = await this.checkExistAndResolveTitle(title);
 
     // Check for duplicate slug
@@ -43,25 +41,12 @@ export class AdminCategoriesService {
         throw new NotFoundException('دسته والد پیدا نشد');
       }
     }
-    // مقداردهی attributes اگر وجود داشته باشد
-    let attributeEntities: any[] = [];
-    if (attributes && Array.isArray(attributes) && attributes.length > 0) {
-      attributeEntities = await Promise.all(
-        attributes.map(async (attrId) => {
-          const attr = await this.attributeService.findOne(attrId);
-          if (!attr || !attr.attribute)
-            throw new NotFoundException(`ویژگی با آیدی ${attrId} پیدا نشد`);
-          return attr.attribute;
-        }),
-      );
-    }
 
     let newCategory = this.categoryRepository.create({
       title,
       slug,
       description,
       parent: parentCategory || undefined,
-      attributes: attributeEntities,
     });
     const newProduct = await this.categoryRepository.save(newCategory);
     return { product: newProduct };
@@ -69,17 +54,27 @@ export class AdminCategoriesService {
 
   async findAll(paginationDto: PaginationDto) {
     const { limit, page, skip } = paginationSolver(paginationDto);
-    const [categories, count] = await this.categoryRepository.findAndCount({
+    
+    // ابتدا دسته‌بندی‌هایی که parent آنها null است را می‌گیریم
+    const [rootCategories, count] = await this.categoryRepository.findAndCount({
+      where: {
+        parent: IsNull(),
+      },
       relations: {
-        attributes: {
-          metas: true,
-        },
+        childs: true,
       },
       skip,
       take: limit,
     });
+
+    // تبدیل به ساختار سلسله‌مراتبی
+    const hierarchicalCategories = rootCategories.map(category => ({
+      ...category,
+      children: category.childs || [],
+    }));
+
     return {
-      categories,
+      categories: hierarchicalCategories,
       pagination: {
         count,
         page,
@@ -93,22 +88,20 @@ export class AdminCategoriesService {
       where: {
         id,
       },
-      relations: {
-        attributes: {
-          metas: true,
-        },
-      },
+      relations:{
+        parent: true,
+        childs: true
+      }
     });
     if (!category) {
       throw new NotFoundException('دسته بندی مورد نظر پیدا نشد');
     }
-    return category;
+    return {category};
   }
 
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
     const category = await this.categoryRepository.findOne({
       where: { id },
-      relations: { attributes: true, parent: true },
     });
     if (!category) {
       throw new NotFoundException('دسته بندی مورد نظر پیدا نشد');
@@ -150,28 +143,21 @@ export class AdminCategoriesService {
       }
     }
 
-    // مقداردهی attributes اگر وجود داشته باشد
-    if (attributes !== undefined) {
-      let attributeEntities: any[] = [];
-      if (Array.isArray(attributes) && attributes.length > 0) {
-        attributeEntities = await Promise.all(
-          attributes.map(async (attrId) => {
-            const attr = await this.attributeService.findOne(attrId);
-            if (!attr || !attr.attribute)
-              throw new NotFoundException(`ویژگی با آیدی ${attrId} پیدا نشد`);
-            return attr.attribute;
-          }),
-        );
-      }
-      category.attributes = attributeEntities;
-    }
-
     await this.categoryRepository.save(category);
     return category;
   }
 
   async remove(id: number) {
-    const category = await this.findOne(id);
+    const { category } = await this.findOne(id);
+    
+    // ابتدا همه فرزندان را حذف می‌کنیم
+    if (category.childs && category.childs.length > 0) {
+      for (const child of category.childs) {
+        await this.categoryRepository.remove(child);
+      }
+    }
+    
+    // سپس دسته‌بندی اصلی را حذف می‌کنیم
     return await this.categoryRepository.remove(category);
   }
 

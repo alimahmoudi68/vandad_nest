@@ -15,7 +15,6 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { BlogModule } from './modules/blog/blog.module';
 import { BlogCategoryModule } from './modules/blog-cats/blog-cat.module';
 import { UploadModule } from './modules/upload/upload.module';
-import { AttributeModule } from './modules/attribute/attribute.module';
 import { CourseModule } from './modules/courses/course.module';
 import { InvoiceModule } from './modules/invoice/invoice.module';
 import { TvCategoryModule } from './modules/tv-cats/tv-cat.module';
@@ -44,7 +43,6 @@ import { CourseCategoryModule } from './modules/course-cats/course-cat.module';
     BlogModule,
     BlogCategoryModule,
     UploadModule,
-    AttributeModule,
     CourseModule,
     InvoiceModule,
     TvCategoryModule,
