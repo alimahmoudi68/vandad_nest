@@ -19,7 +19,7 @@ let dataSouce = new DataSource({
     password: DB_PASSWORD,
     database: DB_NAME,
     port: +DB_PORT,
-    synchronize: false,
+    synchronize: true,
     entities : [
         "dist/**/**/**/*.entity{.ts,.js}" ,
         "dist/**/**/*.entity{.ts,.js}" ,

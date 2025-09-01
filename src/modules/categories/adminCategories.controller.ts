@@ -42,6 +42,12 @@ export class AdminCategoriesController {
     return this.categoriesService.findAll(paginationDto);
   }
 
+  @Get('childs')
+  @Version('1')
+  findAllChilds() {
+    return this.categoriesService.findAllChilds();
+  }
+
   @Get(':id')
   @Version('1')
   findOne(@Param('id') id: string) {

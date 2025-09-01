@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, Not } from 'typeorm';
 
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -81,6 +81,18 @@ export class AdminCategoriesService {
         limit,
       },
     };
+  }
+
+
+  async findAllChilds() {
+    
+    const categories = await this.categoryRepository.find({
+      where: {
+        parent: Not(IsNull()),
+      },
+    });
+
+    return {categories};
   }
 
   async findOne(id: number) {

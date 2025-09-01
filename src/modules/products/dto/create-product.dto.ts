@@ -17,7 +17,7 @@ export class CreateProductDto {
     @IsOptional()
     @Length(5 , 600 , {message : "توضیحات باید بین ۵ و ۶۰۰ کاراکتر باشد"})
     @ApiProperty({example: 'بهترین گوشی موبایل'})
-    description: string
+    description?: string
 
     @IsOptional()
     @IsString({message: "اسلاگ باید رشته باشد"})
@@ -26,7 +26,7 @@ export class CreateProductDto {
 
 
     @IsOptional()
-    @IsNumber({}, {message: "موجودی باید عدد باشد"})
+    @IsNumber({}, { message: "موجودی باید عدد باشد" })
     @ApiProperty({example: 10})
     stock?: number;
 
@@ -47,7 +47,7 @@ export class CreateProductDto {
     @IsOptional()
     //@IsArray() // درخالت فرم میاد توی یک رشته میفرسته که با کاما جدا شده برای همین ارایه را کامنت کردم
     @ApiProperty({type: String , isArray: true, example: [1]})
-    categories: string[] | string 
+    categories?: string[] | string
 
 
     @IsOptional()

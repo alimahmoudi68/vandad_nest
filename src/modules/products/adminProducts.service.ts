@@ -28,6 +28,9 @@ export class AdminProductsService {
   ) {}
 
   async create(createProductDto: CreateProductDto) {
+    // تبدیل DTO به any برای پردازش اولیه
+    const dto = createProductDto as any;
+    
     let {
       title,
       slug,
@@ -40,18 +43,34 @@ export class AdminProductsService {
       categories,
       discount,
       discountPrice,
-    } = createProductDto;
+    } = dto;
+
+
+    // تبدیل رشته‌های خالی به undefined برای فیلدهای عددی
+    if (stock === '' || stock === null) stock = undefined;
+    if (thumbnail === '' || thumbnail === null) thumbnail = undefined;
+    if (discountPrice === '' || discountPrice === null) discountPrice = undefined;
+    if (Array.isArray(images)) {
+      images = images.filter(img => img !== '' && img !== null);
+    }
+
+    // اگر slug ارسال نشده باشد، از title بساز
+    if (!slug) {
+      slug = title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
+    }
+
 
     // Check for duplicate slug
     const existSlug = await this.productRepository.findOne({ where: { slug } });
     if (existSlug) {
-      throw new BadRequestException('محصولی با این اسلاگ قبلاً ثبت شده است');
-    }
-
-    if (!isArray(categories) && typeof categories == 'string') {
-      categories = categories.split(',');
-    } else if (!categories) {
-      throw new BadRequestException('دسته بندی آرایه نیست');
+      // اگر slug تکراری بود، عدد اضافه کن
+      let counter = 1;
+      let newSlug = slug;
+      while (await this.productRepository.findOne({ where: { slug: newSlug } })) {
+        newSlug = `${slug}-${counter}`;
+        counter++;
+      }
+      slug = newSlug;
     }
 
     // تبدیل thumbnail و images به entity
@@ -66,7 +85,6 @@ export class AdminProductsService {
       });
     }
 
-
     // مقداردهی اولیه محصول
     const newProduct = this.productRepository.create({
       title,
@@ -78,22 +96,21 @@ export class AdminProductsService {
       thumbnail: thumbnailEntity || undefined,
       images: imagesEntities,
       discount: !!discount,
-      discountPrice: discountPrice ?? 0,
+      discountPrice: discountPrice || 0,
     });
 
     // دسته‌بندی‌ها
     if (categories) {
       const categoriesFounded = await this.categoryRepository.findBy({
-        id: In(categories),
+        id: categories,
       });
       newProduct.categories = categoriesFounded;
+    } else {
+      newProduct.categories = [];
     }
 
-    // مقداردهی اولیه attributes (تبدیل object به آرایه entity) حذف می‌شود و به بعد از ذخیره محصول منتقل می‌شود
-
-    // ذخیره محصول بدون attributes
+    // ذخیره محصول
     const savedProduct = await this.productRepository.save(newProduct);
-
 
     return plainToInstance(ProductDto, savedProduct, {
       excludeExtraneousValues: true,
@@ -107,12 +124,13 @@ export class AdminProductsService {
 
     const query = this.productRepository
       .createQueryBuilder('product')
-      .leftJoinAndSelect('product.categories', 'category')
+      .leftJoinAndSelect('product.categories', 'categories')
+      .leftJoinAndSelect('product.thumbnail', 'thumbnail')
+      .leftJoinAndSelect('product.images', 'images')
       .skip(skip)
       .take(limit);
 
     const [products, total] = await query.getManyAndCount();
-
 
     return {
       products: products.map((product) =>
@@ -129,22 +147,28 @@ export class AdminProductsService {
   }
 
   async findOne(id: number) {
-    // واکشی محصول با تمام روابط مورد نیاز
-    const product = await this.productRepository.findOne({
-      where: { id },
-      relations: [
-        'categories',
-      ],
-    });
+    // واکشی محصول با تمام روابط مورد نیاز - استفاده از QueryBuilder برای اطمینان از بارگذاری روابط
+    const product = await this.productRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.categories', 'categories')
+      .leftJoinAndSelect('product.thumbnail', 'thumbnail')
+      .leftJoinAndSelect('product.images', 'images')
+      .where('product.id = :id', { id })
+      .getOne();
 
     if (!product) {
       throw new NotFoundException('محصولی پیدا نشد');
     }
 
-    // خروجی به صورت ProductDto
-    return plainToInstance(ProductDto, product, {
+
+
+    // تبدیل به DTO با تنظیمات صحیح
+    const result = plainToInstance(ProductDto, product, {
       excludeExtraneousValues: true,
+      enableImplicitConversion: true,
     });
+
+    return { product: result };
   }
 
   async update(id: number, updateProductDto: UpdateProductDto) {
@@ -178,7 +202,7 @@ export class AdminProductsService {
     if (sku !== undefined) product.sku = sku;
     if (description !== undefined) product.description = description;
     if (discount !== undefined) product.discount = discount;
-    if (discountPrice !== undefined) product.discountPrice = discountPrice;
+    if (discountPrice !== undefined) product.discountPrice = discountPrice || 0;
 
     // دسته‌بندی‌ها
     if (categories) {

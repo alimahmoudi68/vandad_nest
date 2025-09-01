@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   Version,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { AdminProductsService } from './adminProducts.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -50,7 +51,7 @@ export class AdminProductsController {
   findOne(@Param('id') id: string) {
     return this.productsService.findOne(+id);
   }
-
+  
   @Put(':id')
   @Version('1')
   @ApiConsumes(SwaggerConsumes.Json , SwaggerConsumes.MultipartData )
