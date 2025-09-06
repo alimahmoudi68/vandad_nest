@@ -215,8 +215,12 @@ export class AuthService {
 
       const user = await this.userRepository.findOne({
         where: { id: payload.id },
+        relations:{
+          avatar: true
+        }
       });
 
+      
       if (!user) {
         throw new ForbiddenException('کاربر پیدا نشد');
       }

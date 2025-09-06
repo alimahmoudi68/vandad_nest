@@ -8,10 +8,9 @@ import {
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
-import { ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { SwaggerConsumes } from 'src/common/enums/swagger-consumes.enum';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { AuthGuard } from '../auth/guards/auth.guard';
 import { Pagination } from 'src/common/decorators/pagination.decorator';
 
 @Controller('products')
@@ -27,10 +26,11 @@ export class ProductsController {
     return this.productsService.findAll(paginationDto);
   }
 
-  @Get(':id')
+  
+  @Get(':slug')
   @Version('1')
-  findOne(@Param('id') id: string) {
-    return this.productsService.findOne(+id);
+  findOne(@Param('id') slug: string) {
+    return this.productsService.findOne(slug);
   }
 
 }

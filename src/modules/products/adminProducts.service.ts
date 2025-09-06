@@ -3,18 +3,20 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
+import { isArray } from 'class-validator';
+
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { InjectRepository } from '@nestjs/typeorm';
 import { ProductEntity } from './entities/product.entity';
-import { In, Repository } from 'typeorm';
 import { CategoryEntity } from '../categories/entities/category.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { paginationSolver } from 'src/utils/common/paginationSolver';
-import { isArray } from 'class-validator';
 import { UploadEntity } from '../upload/entities/upload.entity';
 import { plainToInstance } from 'class-transformer';
 import { ProductDto } from './dto/product.dto';
+import slugify from 'src/utils/common/slugify';
 
 @Injectable()
 export class AdminProductsService {
@@ -54,12 +56,8 @@ export class AdminProductsService {
       images = images.filter(img => img !== '' && img !== null);
     }
 
-    // اگر slug ارسال نشده باشد، از title بساز
-    if (!slug) {
-      slug = title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
-    }
-
-
+    slug = slugify(title);
+  
     // Check for duplicate slug
     const existSlug = await this.productRepository.findOne({ where: { slug } });
     if (existSlug) {
@@ -73,6 +71,7 @@ export class AdminProductsService {
       slug = newSlug;
     }
 
+    
     // تبدیل thumbnail و images به entity
     let imagesEntities: UploadEntity[] = [];
     if (images && Array.isArray(images)) {

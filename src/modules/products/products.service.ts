@@ -27,7 +27,7 @@ export class ProductsService {
     const [products, total] = await this.productRepositor.findAndCount({
       skip,
       take: limit,
-      relations: ['categories'],
+      relations: ['categories' , 'thumbnail'],
     });
     return {
       products,
@@ -39,19 +39,19 @@ export class ProductsService {
     };
   }
 
-  async findOne(id: number) {
+  async findOne(slug: string) {
     const product = await this.productRepositor.findOne({
       where: {
-        id,
+        slug,
       },
-      relations: ['categories'],
+      relations: ['categories', 'thumbnail', 'images'],
     });
 
     if (!product) {
       throw new NotFoundException('محصولی پیدا نشد');
     }
 
-    return product;
+    return {product};
   }
 
 }

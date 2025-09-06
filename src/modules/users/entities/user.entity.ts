@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
   OneToOne,
   JoinTable,
+  ManyToOne,
 } from 'typeorm';
 
 import { AddressEntity } from '../../address/entities/address.entity';
@@ -15,6 +16,8 @@ import { TicketEntity } from '../../tickets/entities/ticket.entity';
 import { ProfileEntity } from './profile.entity';
 import { BlogEntity } from 'src/modules/blog/entities/blog.entity';
 import { BlogCommentEntity } from 'src/modules/blog/entities/blogComment.entity';
+import { UploadEntity } from 'src/modules/upload/entities/upload.entity';
+
 
 @Entity('users')
 export class UserEntity {
@@ -61,6 +64,9 @@ export class UserEntity {
 
   @OneToMany(()=>BlogCommentEntity , (blogCommet)=>blogCommet.user)
   comments: BlogCommentEntity[];
+
+  @ManyToOne(() => UploadEntity, { nullable: true })
+  avatar: UploadEntity;
 
   @CreateDateColumn()
   created_at: Date;

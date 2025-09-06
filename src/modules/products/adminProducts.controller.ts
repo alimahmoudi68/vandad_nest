@@ -9,7 +9,6 @@ import {
   UseInterceptors,
   Version,
   Query,
-  BadRequestException,
 } from '@nestjs/common';
 import { AdminProductsService } from './adminProducts.service';
 import { CreateProductDto } from './dto/create-product.dto';
