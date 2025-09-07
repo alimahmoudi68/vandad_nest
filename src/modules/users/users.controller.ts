@@ -6,12 +6,14 @@ import {
   UseInterceptors,
   Req,
   ForbiddenException,
+  Body,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { AuthDecorator } from 'src/common/decorators/auth.decorator';
 import { UserService } from './users.service';
-import { Request , Response} from 'express';
+import { Request } from 'express';
 import { ResponseFormatInterceptor } from 'src/interceptors/responseFormat.interceptor';
 
 @Controller('users')
@@ -38,6 +40,19 @@ export class UsersController {
     const userId= request.user?.id;
     if(userId){
       return this.userService.getProfile(+userId);
+    }
+    else{
+      return new ForbiddenException();
+    }
+  }
+
+  @Put('profile')
+  @Version('1')
+  @ApiBearerAuth("Authorization")
+  updateProfile(@Req() request: Request, @Body() updateProfileDto: UpdateProfileDto) {
+    const userId= request.user?.id;
+    if(userId){
+      return this.userService.updateProfile(+userId, updateProfileDto);
     }
     else{
       return new ForbiddenException();

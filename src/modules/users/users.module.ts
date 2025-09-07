@@ -8,9 +8,10 @@ import { UserEntity } from './entities/user.entity';
 import { AuthModule } from '../auth/auth.module';
 import { AuthService } from '../auth/auth.service';
 import { ProfileEntity } from './entities/profile.entity';
+import { UploadEntity } from '../upload/entities/upload.entity';
 
 @Module({
-  imports: [AuthModule, TypeOrmModule.forFeature([UserEntity , ProfileEntity])],
+  imports: [AuthModule, TypeOrmModule.forFeature([UserEntity , ProfileEntity, UploadEntity])],
   controllers: [UsersController , AdminUsersController],
   providers: [UserService, AdminUserService, AuthService],
   exports: [UserService]
