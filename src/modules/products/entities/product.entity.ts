@@ -1,7 +1,10 @@
-import { Column, CreateDateColumn, Entity , JoinTable , ManyToMany, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity , JoinTable , ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 import { CategoryEntity } from "src/modules/categories/entities/category.entity";
+import { UserEntity } from "src/modules/users/entities/user.entity";
 import { UploadEntity } from 'src/modules/upload/entities/upload.entity';
+import { ProductAttributeEntity } from './product-attribute.entity';
+import {ProductVariantEntity} from './product-variant.entity';
 
 
 @Entity("products")
@@ -22,6 +25,11 @@ export class ProductEntity {
     @Column({nullable: false})
     price: number
 
+    @Column({nullable: false})
+    minPrice: number
+
+    @Column({nullable: false})
+    maxPrice: number
 
     @Column({ nullable: true })
     stock?: number;
@@ -29,6 +37,8 @@ export class ProductEntity {
     @Column({ nullable: true })
     sku?: string;
 
+    @Column({ default: false })
+    isVariant: boolean;
 
     @Column({ default: false })
     discount: boolean;
@@ -52,6 +62,26 @@ export class ProductEntity {
         inverseJoinColumn: {name : "category_id" , referencedColumnName : "id"}
     })
     categories: CategoryEntity[]
+
+
+    //bookmark
+    @ManyToMany(()=>UserEntity , (user)=>user.bookmarks)
+    @JoinTable({
+        name: "bookmarks" ,
+        joinColumn: {name: "product_id" , referencedColumnName: "id"} ,
+        inverseJoinColumn: {name : "user_id" , referencedColumnName : "id"}
+    })
+    userBookmarks: UserEntity[]
+
+
+    @OneToMany(() => ProductAttributeEntity, attr => attr.product, { cascade: true })
+    attributes: ProductAttributeEntity[];
+
+
+    @OneToMany(() => ProductVariantEntity, variant => variant.product, {
+        cascade: true,
+    })
+    variants: ProductVariantEntity[];
 
 
     @CreateDateColumn()

@@ -21,6 +21,7 @@ import { TvCategoryModule } from './modules/tv-cats/tv-cat.module';
 import { TvModule } from './modules/tv/tv.module';
 import { EpisodeModule } from './modules/episodes/episode.module';
 import { CourseCategoryModule } from './modules/course-cats/course-cat.module';
+import { AttributeModule } from './modules/attribute/attribute.module';
 
 
 
@@ -48,7 +49,8 @@ import { CourseCategoryModule } from './modules/course-cats/course-cat.module';
     TvCategoryModule,
     TvModule,
     EpisodeModule,
-    CourseCategoryModule
+    CourseCategoryModule,
+    AttributeModule,
   ],
   controllers: [],
   providers: [],

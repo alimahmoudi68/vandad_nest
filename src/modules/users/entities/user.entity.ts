@@ -14,6 +14,7 @@ import {
 import { AddressEntity } from '../../address/entities/address.entity';
 import { TicketEntity } from '../../tickets/entities/ticket.entity';
 import { ProfileEntity } from './profile.entity';
+import { ProductEntity } from '../../products/entities/product.entity';
 import { BlogEntity } from 'src/modules/blog/entities/blog.entity';
 import { BlogCommentEntity } from 'src/modules/blog/entities/blogComment.entity';
 import { UploadEntity } from 'src/modules/upload/entities/upload.entity';
@@ -47,6 +48,10 @@ export class UserEntity {
 
   @OneToMany(() => TicketEntity, (ticket) => ticket.user)
   tickets: TicketEntity[];
+
+   //product bookmark
+   @ManyToMany(() => ProductEntity, (product) => product.userBookmarks)
+   bookmarks: ProductEntity[];
 
 
   // blog

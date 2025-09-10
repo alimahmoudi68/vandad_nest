@@ -1,141 +1,276 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
-import { isArray } from 'class-validator';
-
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { InjectRepository } from '@nestjs/typeorm';
 import { ProductEntity } from './entities/product.entity';
+import { In, Repository } from 'typeorm';
 import { CategoryEntity } from '../categories/entities/category.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { paginationSolver } from 'src/utils/common/paginationSolver';
+import { isArray } from 'class-validator';
 import { UploadEntity } from '../upload/entities/upload.entity';
 import { plainToInstance } from 'class-transformer';
 import { ProductDto } from './dto/product.dto';
-import slugify from 'src/utils/common/slugify';
+import { AttributeEntity } from '../attribute/entities/attribute.entity';
+import { ProductAttributeEntity } from './entities/product-attribute.entity';
+import { ProductVariantEntity } from './entities/product-variant.entity';
+import { ProductVariantAttributeEntity } from './entities/product-variant-attribute.entity';
 
 @Injectable()
 export class AdminProductsService {
+
   constructor(
     @InjectRepository(ProductEntity)
-    private readonly productRepository: Repository<ProductEntity>,
+    private readonly productRepository : Repository<ProductEntity> ,
     @InjectRepository(CategoryEntity)
-    private readonly categoryRepository: Repository<CategoryEntity>,
+    private readonly categoryRepository : Repository<CategoryEntity>,
     @InjectRepository(UploadEntity)
     private readonly uploadRepository: Repository<UploadEntity>,
-  ) {}
+    @InjectRepository(AttributeEntity)
+    private readonly attributeRepository: Repository<AttributeEntity>
+  ){}
 
+  
   async create(createProductDto: CreateProductDto) {
-    // تبدیل DTO به any برای پردازش اولیه
-    const dto = createProductDto as any;
-    
     let {
       title,
       slug,
       price,
+      maxPrice,
+      minPrice,
       stock,
       sku,
       thumbnail,
       images,
       description,
       categories,
+      isVariant,
+      attributes,
+      variants,
       discount,
-      discountPrice,
-    } = dto;
+      discountPrice
+    } = createProductDto;
 
-
-    // تبدیل رشته‌های خالی به undefined برای فیلدهای عددی
-    if (stock === '' || stock === null) stock = undefined;
-    if (thumbnail === '' || thumbnail === null) thumbnail = undefined;
-    if (discountPrice === '' || discountPrice === null) discountPrice = undefined;
-    if (Array.isArray(images)) {
-      images = images.filter(img => img !== '' && img !== null);
-    }
-
-    slug = slugify(title);
-  
     // Check for duplicate slug
     const existSlug = await this.productRepository.findOne({ where: { slug } });
     if (existSlug) {
-      // اگر slug تکراری بود، عدد اضافه کن
-      let counter = 1;
-      let newSlug = slug;
-      while (await this.productRepository.findOne({ where: { slug: newSlug } })) {
-        newSlug = `${slug}-${counter}`;
-        counter++;
-      }
-      slug = newSlug;
+      throw new BadRequestException('محصولی با این اسلاگ قبلاً ثبت شده است');
     }
 
-    
+    if (!isArray(categories) && typeof categories == "string") {
+      categories = categories.split(",");
+    } else if (!categories) {
+      throw new BadRequestException("دسته بندی آرایه نیست");
+    }
+
     // تبدیل thumbnail و images به entity
     let imagesEntities: UploadEntity[] = [];
     if (images && Array.isArray(images)) {
       imagesEntities = await this.uploadRepository.findBy({ id: In(images) });
     }
-    let thumbnailEntity: UploadEntity | null = null;
+    let thumbnailEntity: UploadEntity | undefined = undefined;
     if (thumbnail) {
-      thumbnailEntity = await this.uploadRepository.findOneBy({
-        id: thumbnail,
+      const foundThumb = await this.uploadRepository.findOneBy({ id: thumbnail });
+      if (!foundThumb) {
+        throw new BadRequestException('تصویر بندانگشتی پیدا نشد');
+      }
+      thumbnailEntity = foundThumb;
+    }
+
+    // --- چک مجاز بودن attribute و meta بر اساس دسته‌بندی ---
+    let allowedAttributes: string[] = [];
+    let allowedMetas: number[] = [];
+    if (categories) {
+      const categoryId = Number(categories[0]); // اگر فقط یکی داری
+      const category = await this.categoryRepository.findOne({
+        where: { id: categoryId },
+        relations: { attributes: { metas: true } }
+      });
+      if (!category) throw new BadRequestException('دسته‌بندی پیدا نشد');
+      allowedAttributes = category.attributes.map(attr => attr.slug);
+      allowedMetas = category.attributes.reduce((acc, attr) => {
+        attr.metas.forEach(meta => acc.push(meta.id));
+        return acc;
+      }, [] as number[]);
+    }
+
+    // چک attributes اصلی محصول
+    if (categories && attributes) {
+      Object.entries(attributes).forEach(([attrSlug, metaId]) => {
+        if (!allowedAttributes.includes(attrSlug)) {
+          throw new BadRequestException(`ویژگی ${attrSlug} برای این دسته‌بندی مجاز نیست`);
+        }
+        if (!allowedMetas.includes(Number(metaId))) {
+          throw new BadRequestException(`متا با id ${metaId} برای ویژگی ${attrSlug} مجاز نیست`);
+        }
       });
     }
+
+    // چک attributes و metas واریانت‌ها
+    if (variants && Array.isArray(variants)) {
+      for (const variant of variants) {
+        const variantAttrs = variant.attributes;
+        if (variantAttrs) {
+          Object.entries(variantAttrs).forEach(([attrSlug, metaId]) => {
+            if (!allowedAttributes.includes(attrSlug)) {
+              throw new BadRequestException(`ویژگی ${attrSlug} برای این دسته‌بندی (در واریانت) مجاز نیست`);
+            }
+            if (!allowedMetas.includes(Number(metaId))) {
+              throw new BadRequestException(`متا با id ${metaId} برای ویژگی ${attrSlug} (در واریانت) مجاز نیست`);
+            }
+          });
+        }
+      }
+    }
+    // --- پایان چک ---
 
     // مقداردهی اولیه محصول
     const newProduct = this.productRepository.create({
       title,
       slug,
       price,
+      minPrice,
+      maxPrice,
       description,
       stock,
       sku,
-      thumbnail: thumbnailEntity || undefined,
+      thumbnail: thumbnailEntity,
       images: imagesEntities,
+      isVariant: !!isVariant,
       discount: !!discount,
-      discountPrice: discountPrice || 0,
+      discountPrice: discountPrice ?? 0
     });
 
     // دسته‌بندی‌ها
     if (categories) {
-      const categoriesFounded = await this.categoryRepository.findBy({
-        id: categories,
-      });
+      const categoriesFounded = await this.categoryRepository.findBy({ id: In(categories) });
       newProduct.categories = categoriesFounded;
-    } else {
-      newProduct.categories = [];
     }
 
-    // ذخیره محصول
+    // مقداردهی اولیه attributes (تبدیل object به آرایه entity) حذف می‌شود و به بعد از ذخیره محصول منتقل می‌شود
+
+    // ذخیره محصول بدون attributes
     const savedProduct = await this.productRepository.save(newProduct);
 
-    return plainToInstance(ProductDto, savedProduct, {
-      excludeExtraneousValues: true,
-    });
+    // ساخت و ذخیره attributes بعد از ذخیره محصول
+    if (attributes) {
+      const attributeSlugs = Object.keys(attributes);
+      const attributeEntities = await this.attributeRepository.find({
+        where: { slug: In(attributeSlugs) }
+      });
+
+      const productAttributes = attributeEntities.map(attrEntity =>
+        this.productRepository.manager.create(ProductAttributeEntity, {
+          attribute: attrEntity,
+          product: savedProduct,
+          attributeMeta: { id: Number(attributes[attrEntity.slug]) }
+        })
+      ) as ProductAttributeEntity[];
+
+      await this.productRepository.manager.save(ProductAttributeEntity, productAttributes);
+      savedProduct.attributes = productAttributes;
+    }
+
+    // ذخیره variants
+    if (variants && Array.isArray(variants)) {
+      const variantEntities: ProductVariantEntity[] = [];
+      for (const variant of variants) {
+        const { attributes: variantAttrs, price, stock, sku } = variant;
+
+        // ساخت و ذخیره واریانت
+        const variantEntity = this.productRepository.manager.create(ProductVariantEntity, {
+          product: savedProduct,
+          price,
+          stock,
+          sku,
+        });
+
+        // ذخیره واریانت تا id داشته باشد
+        const savedVariant = await this.productRepository.manager.save(ProductVariantEntity, variantEntity) as ProductVariantEntity;
+
+        // ساخت ویژگی‌های واریانت
+        const variantAttrEntities: ProductVariantAttributeEntity[] = [];
+        if (variantAttrs) {
+          for (const [attrSlug, metaId] of Object.entries(variantAttrs)) {
+            // پیدا کردن AttributeEntity
+            const attrEntity = await this.attributeRepository.findOne({ where: { slug: attrSlug } });
+            if (!attrEntity) continue;
+
+            const variantAttrEntity = this.productRepository.manager.create(ProductVariantAttributeEntity, {
+              variant: savedVariant,
+              attribute: attrEntity,
+              attributeMeta: { id: Number(metaId) }
+            }) as ProductVariantAttributeEntity;
+            variantAttrEntities.push(variantAttrEntity);
+          }
+          // ذخیره ویژگی‌های واریانت
+          await this.productRepository.manager.save(ProductVariantAttributeEntity, variantAttrEntities);
+          savedVariant.attributes = variantAttrEntities;
+        }
+
+        variantEntities.push(savedVariant);
+      }
+      savedProduct.variants = variantEntities;
+    }
+
+    return plainToInstance(ProductDto, savedProduct, { excludeExtraneousValues: true });
   }
 
-  async findAll(
-    paginationDto: PaginationDto,
-  ) {
+  async findAll(paginationDto: PaginationDto, attributeFilters: Record<string, any>) {
     const { limit, page, skip } = paginationSolver(paginationDto);
-
-    const query = this.productRepository
-      .createQueryBuilder('product')
-      .leftJoinAndSelect('product.categories', 'categories')
-      .leftJoinAndSelect('product.thumbnail', 'thumbnail')
-      .leftJoinAndSelect('product.images', 'images')
+  
+    const query = this.productRepository.createQueryBuilder('product')
+      .leftJoinAndSelect('product.categories', 'category')
+      .leftJoinAndSelect('category.attributes', 'categoryAttribute')
+      .leftJoinAndSelect('product.variants', 'variant')
+      .leftJoinAndSelect('variant.attributes', 'variantAttribute')
+      .leftJoinAndSelect('variantAttribute.attribute', 'variantAttr')
+      .leftJoinAndSelect('variantAttribute.attributeMeta', 'variantAttrMeta')
+      .leftJoinAndSelect('product.attributes', 'productAttribute')
+      .leftJoinAndSelect('productAttribute.attribute', 'productAttributeEntity')
+      .leftJoinAndSelect('productAttribute.attributeMeta', 'productAttributeMeta')
       .skip(skip)
       .take(limit);
-
+  
     const [products, total] = await query.getManyAndCount();
 
+    // جمع‌آوری همه attributeIdهای یکتا از همه دسته‌بندی‌های محصولات
+    const allAttributeIds = Array.from(new Set(
+      products.flatMap(product =>
+        product.categories.flatMap(category =>
+          category.attributes.map(attr => attr.id)
+        )
+      )
+    ));
+
+    // گرفتن همه attributeها با metas فقط با یک کوئری
+    const attributesWithMetas = await this.attributeRepository.find({
+      where: { id: In(allAttributeIds) },
+      relations: ['metas'],
+    });
+    const attrIdToFullAttr = Object.fromEntries(
+      attributesWithMetas.map(attr => [attr.id, attr])
+    );
+
+    // جایگزینی metas کامل برای هر attribute
+    for (const product of products) {
+      for (const category of product.categories) {
+        for (const attribute of category.attributes) {
+          attribute.metas = attrIdToFullAttr[attribute.id]?.metas || [];
+        }
+      }
+    }
+
+    // لاگ برای بررسی مقدار واقعی metas قبل از mapping
+    if (products.length > 0 && products[0].categories.length > 0 && products[0].categories[0].attributes.length > 0) {
+      console.log('metas sample:', JSON.stringify(products[0].categories[0].attributes[0].metas, null, 2));
+    }
+
     return {
-      products: products.map((product) =>
+      products: products.map(product =>
         plainToInstance(ProductDto, product, {
           excludeExtraneousValues: true,
-        }),
+        })
       ),
       pagination: {
         total,
@@ -144,30 +279,58 @@ export class AdminProductsService {
       },
     };
   }
+  
+  
 
   async findOne(id: number) {
-    // واکشی محصول با تمام روابط مورد نیاز - استفاده از QueryBuilder برای اطمینان از بارگذاری روابط
-    const product = await this.productRepository
-      .createQueryBuilder('product')
-      .leftJoinAndSelect('product.categories', 'categories')
-      .leftJoinAndSelect('product.thumbnail', 'thumbnail')
-      .leftJoinAndSelect('product.images', 'images')
-      .where('product.id = :id', { id })
-      .getOne();
+    // واکشی محصول با تمام روابط مورد نیاز
+    const product = await this.productRepository.findOne({
+      where: { id },
+      relations: [
+        'categories',
+        'categories.attributes',
+        'categories.attributes.metas',
+        'variants',
+        'variants.attributes',
+        'variants.attributes.attribute',
+        'variants.attributes.attributeMeta',
+        'attributes',
+        'attributes.attribute',
+        'attributes.attributeMeta',
+      ],
+    });
 
     if (!product) {
       throw new NotFoundException('محصولی پیدا نشد');
     }
 
+    // جمع‌آوری همه attributeIdهای یکتا از همه دسته‌بندی‌های محصول
+    const allAttributeIds = Array.from(new Set(
+      product.categories.flatMap(category =>
+        category.attributes.map(attr => attr.id)
+      )
+    ));
 
-
-    // تبدیل به DTO با تنظیمات صحیح
-    const result = plainToInstance(ProductDto, product, {
-      excludeExtraneousValues: true,
-      enableImplicitConversion: true,
+    // گرفتن همه attributeها با metas فقط با یک کوئری
+    const attributesWithMetas = await this.attributeRepository.find({
+      where: { id: In(allAttributeIds) },
+      relations: ['metas'],
     });
+    const attrIdToFullAttr = Object.fromEntries(
+      attributesWithMetas.map(attr => [attr.id, attr])
+    );
 
-    return { product: result };
+    // جایگزینی metas کامل برای هر attribute
+    for (const category of product.categories) {
+      for (const attribute of category.attributes) {
+        attribute.metas = attrIdToFullAttr[attribute.id]?.metas || [];
+      }
+    }
+
+    // خروجی به صورت ProductDto
+    return plainToInstance(ProductDto, product, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async update(id: number, updateProductDto: UpdateProductDto) {
@@ -175,19 +338,29 @@ export class AdminProductsService {
       title,
       slug,
       price,
+      maxPrice,
+      minPrice,
       stock,
       sku,
       thumbnail,
       images,
       description,
       categories,
+      isVariant,
+      attributes,
+      variants,
       discount,
-      discountPrice,
+      discountPrice
     } = updateProductDto;
 
     // پیدا کردن محصول
     const product = await this.productRepository.findOne({
-      where: { id }
+      where: { id },
+      relations: [
+        'attributes',
+        'variants',
+        'variants.attributes'
+      ]
     });
     if (!product) {
       throw new NotFoundException('محصول پیدا نشد');
@@ -197,20 +370,21 @@ export class AdminProductsService {
     if (title !== undefined) product.title = title;
     if (slug !== undefined) product.slug = slug;
     if (price !== undefined) product.price = price;
+    if (minPrice !== undefined) product.minPrice = minPrice;
+    if (maxPrice !== undefined) product.maxPrice = maxPrice;
     if (stock !== undefined) product.stock = stock;
     if (sku !== undefined) product.sku = sku;
     if (description !== undefined) product.description = description;
+    if (isVariant !== undefined) product.isVariant = isVariant;
     if (discount !== undefined) product.discount = discount;
-    if (discountPrice !== undefined) product.discountPrice = discountPrice || 0;
+    if (discountPrice !== undefined) product.discountPrice = discountPrice;
 
     // دسته‌بندی‌ها
     if (categories) {
-      if (!isArray(categories) && typeof categories == 'string') {
-        categories = categories.split(',');
+      if (!isArray(categories) && typeof categories == "string") {
+        categories = categories.split(",");
       }
-      const categoriesFounded = await this.categoryRepository.findBy({
-        id: In(categories),
-      });
+      const categoriesFounded = await this.categoryRepository.findBy({ id: In(categories) });
       product.categories = categoriesFounded;
     }
 
@@ -221,27 +395,97 @@ export class AdminProductsService {
 
     // thumbnail
     if (thumbnail) {
-      const thumbnailEntity = await this.uploadRepository.findOneBy({
-        id: thumbnail,
-      });
-      if (thumbnailEntity) {
-        product.thumbnail = thumbnailEntity;
+      const foundThumb = await this.uploadRepository.findOneBy({ id: thumbnail });
+      if (!foundThumb) {
+        throw new BadRequestException('تصویر بندانگشتی پیدا نشد');
       }
+      product.thumbnail = foundThumb;
+    }
+
+    // حذف ویژگی‌های قبلی محصول
+    if (product.attributes && product.attributes.length > 0) {
+      await this.productRepository.manager.delete('ProductAttributeEntity', { product: { id: product.id } });
+    }
+
+    // ایجاد ویژگی‌های جدید محصول
+    if (attributes) {
+      const attributeSlugs = Object.keys(attributes);
+      const attributeEntities = await this.attributeRepository.find({
+        where: { slug: In(attributeSlugs) }
+      });
+
+      const productAttributes = attributeEntities.map(attrEntity =>
+        this.productRepository.manager.create(ProductAttributeEntity, {
+          attribute: attrEntity,
+          product: product,
+          attributeMeta: { id: Number(attributes[attrEntity.slug]) }
+        })
+      ) as ProductAttributeEntity[];
+
+      await this.productRepository.manager.save(ProductAttributeEntity, productAttributes);
+      product.attributes = productAttributes;
+    }
+
+    // حذف واریانت‌های قبلی
+    if (product.variants && product.variants.length > 0) {
+      await this.productRepository.manager.delete('ProductVariantEntity', { product: { id: product.id } });
+    }
+
+    // ایجاد واریانت‌های جدید
+    if (variants && Array.isArray(variants)) {
+      const variantEntities: ProductVariantEntity[] = [];
+      for (const variant of variants) {
+        const { attributes: variantAttrs, price, stock, sku } = variant;
+
+        // ساخت و ذخیره واریانت
+        const variantEntity = this.productRepository.manager.create(ProductVariantEntity, {
+          product: product,
+          price,
+          stock,
+          sku,
+        });
+
+        const savedVariant = await this.productRepository.manager.save(ProductVariantEntity, variantEntity) as ProductVariantEntity;
+
+        // ساخت ویژگی‌های واریانت
+        const variantAttrEntities: ProductVariantAttributeEntity[] = [];
+        if (variantAttrs) {
+          for (const [attrSlug, metaId] of Object.entries(variantAttrs)) {
+            const attrEntity = await this.attributeRepository.findOne({ where: { slug: attrSlug } });
+            if (!attrEntity) continue;
+
+            const variantAttrEntity = this.productRepository.manager.create(ProductVariantAttributeEntity, {
+              variant: savedVariant,
+              attribute: attrEntity,
+              attributeMeta: { id: Number(metaId) }
+            }) as ProductVariantAttributeEntity;
+            variantAttrEntities.push(variantAttrEntity);
+          }
+          await this.productRepository.manager.save(ProductVariantAttributeEntity, variantAttrEntities);
+          savedVariant.attributes = variantAttrEntities;
+        }
+
+        variantEntities.push(savedVariant);
+      }
+      product.variants = variantEntities;
     }
 
     // ذخیره نهایی محصول
     const savedProduct = await this.productRepository.save(product);
 
     // خروجی به صورت ProductDto
-    return plainToInstance(ProductDto, savedProduct, {
-      excludeExtraneousValues: true,
-    });
+    return plainToInstance(ProductDto, savedProduct, { excludeExtraneousValues: true });
   }
 
   async remove(id: number) {
     // پیدا کردن محصول با روابط لازم
     const product = await this.productRepository.findOne({
       where: { id },
+      relations: [
+        'attributes',
+        'variants',
+        'variants.attributes',
+      ],
     });
     if (!product) {
       throw new NotFoundException('محصول پیدا نشد');

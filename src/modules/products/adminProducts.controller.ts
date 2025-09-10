@@ -1,3 +1,4 @@
+
 import {
   Controller,
   Get,
@@ -37,12 +38,12 @@ export class AdminProductsController {
   @ApiConsumes(SwaggerConsumes.UrlEncoded , SwaggerConsumes.Json)
   @Pagination() 
   findAll(@Query() query: any) {
-    const { page, limit } = query;
+    const { page, limit, ...attributeFilters } = query;
     const paginationDto: PaginationDto = {
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 10,
     };
-    return this.productsService.findAll(paginationDto);
+    return this.productsService.findAll(paginationDto, attributeFilters);
   }
 
   @Get(':id')
@@ -50,7 +51,7 @@ export class AdminProductsController {
   findOne(@Param('id') id: string) {
     return this.productsService.findOne(+id);
   }
-  
+
   @Put(':id')
   @Version('1')
   @ApiConsumes(SwaggerConsumes.Json , SwaggerConsumes.MultipartData )
