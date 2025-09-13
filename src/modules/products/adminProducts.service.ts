@@ -30,6 +30,21 @@ export class AdminProductsService {
     private readonly attributeRepository: Repository<AttributeEntity>
   ){}
 
+  /**
+   * محاسبه قیمت‌های محصول بر اساس واریانت‌ها
+   */
+  private calculateProductPricesFromVariants(variantPrices: number[]): { minPrice: number, maxPrice: number, basePrice: number } {
+    if (variantPrices.length === 0) {
+      return { minPrice: 0, maxPrice: 0, basePrice: 0 };
+    }
+    
+    const minPrice = Math.min(...variantPrices);
+    const maxPrice = Math.max(...variantPrices);
+    const basePrice = minPrice; // قیمت پایه = کمترین قیمت واریانت
+    
+    return { minPrice, maxPrice, basePrice };
+  }
+
   
   async create(createProductDto: CreateProductDto) {
     let {
@@ -174,8 +189,10 @@ export class AdminProductsService {
     // ذخیره variants
     if (variants && Array.isArray(variants)) {
       const variantEntities: ProductVariantEntity[] = [];
+      const variantPrices: number[] = [];
+      
       for (const variant of variants) {
-        const { attributes: variantAttrs, price, stock, sku } = variant;
+        const { attributes: variantAttrs, price, stock, sku, discount, discountPrice, images } = variant;
 
         // ساخت و ذخیره واریانت
         const variantEntity = this.productRepository.manager.create(ProductVariantEntity, {
@@ -183,10 +200,19 @@ export class AdminProductsService {
           price,
           stock,
           sku,
+          discount: discount ?? false,
+          discountPrice: discountPrice ?? 0,
         });
 
         // ذخیره واریانت تا id داشته باشد
         const savedVariant = await this.productRepository.manager.save(ProductVariantEntity, variantEntity) as ProductVariantEntity;
+
+        // اضافه کردن تصاویر واریانت
+        if (images && Array.isArray(images) && images.length > 0) {
+          const variantImages = await this.uploadRepository.findBy({ id: In(images) });
+          savedVariant.images = variantImages;
+          await this.productRepository.manager.save(ProductVariantEntity, savedVariant);
+        }
 
         // ساخت ویژگی‌های واریانت
         const variantAttrEntities: ProductVariantAttributeEntity[] = [];
@@ -209,7 +235,21 @@ export class AdminProductsService {
         }
 
         variantEntities.push(savedVariant);
+        variantPrices.push(price);
       }
+      
+      // محاسبه minPrice و maxPrice بر اساس واریانت‌ها
+      if (variantPrices.length > 0) {
+        const { minPrice, maxPrice, basePrice } = this.calculateProductPricesFromVariants(variantPrices);
+        
+        // به‌روزرسانی قیمت‌های محصول اصلی
+        savedProduct.minPrice = minPrice;
+        savedProduct.maxPrice = maxPrice;
+        savedProduct.price = basePrice;
+        
+        await this.productRepository.save(savedProduct);
+      }
+      
       savedProduct.variants = variantEntities;
     }
 
@@ -226,6 +266,7 @@ export class AdminProductsService {
       .leftJoinAndSelect('variant.attributes', 'variantAttribute')
       .leftJoinAndSelect('variantAttribute.attribute', 'variantAttr')
       .leftJoinAndSelect('variantAttribute.attributeMeta', 'variantAttrMeta')
+      .leftJoinAndSelect('variant.images', 'variantImages')
       .leftJoinAndSelect('product.attributes', 'productAttribute')
       .leftJoinAndSelect('productAttribute.attribute', 'productAttributeEntity')
       .leftJoinAndSelect('productAttribute.attributeMeta', 'productAttributeMeta')
@@ -294,6 +335,7 @@ export class AdminProductsService {
         'variants.attributes',
         'variants.attributes.attribute',
         'variants.attributes.attributeMeta',
+        'variants.images',
         'attributes',
         'attributes.attribute',
         'attributes.attributeMeta',
@@ -434,8 +476,10 @@ export class AdminProductsService {
     // ایجاد واریانت‌های جدید
     if (variants && Array.isArray(variants)) {
       const variantEntities: ProductVariantEntity[] = [];
+      const variantPrices: number[] = [];
+      
       for (const variant of variants) {
-        const { attributes: variantAttrs, price, stock, sku } = variant;
+        const { attributes: variantAttrs, price, stock, sku, discount, discountPrice, images } = variant;
 
         // ساخت و ذخیره واریانت
         const variantEntity = this.productRepository.manager.create(ProductVariantEntity, {
@@ -443,9 +487,18 @@ export class AdminProductsService {
           price,
           stock,
           sku,
+          discount: discount ?? false,
+          discountPrice: discountPrice ?? 0,
         });
 
         const savedVariant = await this.productRepository.manager.save(ProductVariantEntity, variantEntity) as ProductVariantEntity;
+
+        // اضافه کردن تصاویر واریانت
+        if (images && Array.isArray(images) && images.length > 0) {
+          const variantImages = await this.uploadRepository.findBy({ id: In(images) });
+          savedVariant.images = variantImages;
+          await this.productRepository.manager.save(ProductVariantEntity, savedVariant);
+        }
 
         // ساخت ویژگی‌های واریانت
         const variantAttrEntities: ProductVariantAttributeEntity[] = [];
@@ -466,7 +519,19 @@ export class AdminProductsService {
         }
 
         variantEntities.push(savedVariant);
+        variantPrices.push(price);
       }
+      
+      // محاسبه minPrice و maxPrice بر اساس واریانت‌ها
+      if (variantPrices.length > 0) {
+        const { minPrice, maxPrice, basePrice } = this.calculateProductPricesFromVariants(variantPrices);
+        
+        // به‌روزرسانی قیمت‌های محصول اصلی
+        product.minPrice = minPrice;
+        product.maxPrice = maxPrice;
+        product.price = basePrice;
+      }
+      
       product.variants = variantEntities;
     }
 

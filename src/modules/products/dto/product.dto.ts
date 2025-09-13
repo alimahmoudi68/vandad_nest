@@ -40,4 +40,19 @@ export class ProductDto {
   @Expose()
   @Type(() => ProductVariantDto)
   variants: ProductVariantDto[];
+
+  @Expose()
+  price: number;
+
+  @Expose()
+  stock: number;
+
+  @Expose()
+  sku: string;
+
+  @Expose()
+  thumbnail: number;
+
+  @Expose()
+  images: number[];
 } 

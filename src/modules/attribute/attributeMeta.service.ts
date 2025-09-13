@@ -78,7 +78,7 @@ export class AttributeMetaService {
         if(!attributeMeta){
         throw new NotFoundException('اتربیوت متا یافت نشد');
         }
-        return attributeMeta;
+        return {attributeMeta};
     }
 
     async update(id: number, updateAttributeMetaDto: UpdateAttributeMetaDto) {

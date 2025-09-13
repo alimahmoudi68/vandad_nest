@@ -1,6 +1,9 @@
 import { Expose, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
+import { AttributeDto } from 'src/modules/attribute/dto/attribute.dto';
+
+
 export class CategoryDto {
   @ApiProperty()
   @Expose()
@@ -23,4 +26,9 @@ export class CategoryDto {
   @Expose()
   @Type(() => CategoryDto)
   children?: CategoryDto[];
+
+  @ApiProperty({ type: () => [AttributeDto] })
+  @Expose()
+  @Type(() => AttributeDto)
+  attributes: AttributeDto[];
 }

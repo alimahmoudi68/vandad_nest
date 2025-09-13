@@ -10,7 +10,7 @@ export class CreateProductDto {
 
     @IsNumber({},{message:"قیمت باید عدد باشد"})
     @IsNotEmpty()
-    @ApiProperty({example: 100000})
+    @ApiProperty({example: 100000, description: 'قیمت محصول. اگر isVariant=true باشد، این قیمت بر اساس کمترین قیمت واریانت محاسبه می‌شود'})
     price: number
 
     @IsString({message : "توضیحات باید رشته باشد"})
@@ -25,11 +25,11 @@ export class CreateProductDto {
     slug?: string;
 
     @IsNumber({}, {message: "حداقل قیمت باید عدد باشد"})
-    @ApiProperty({example: 100000})
+    @ApiProperty({example: 100000, description: 'حداقل قیمت محصول. اگر isVariant=true باشد، این مقدار بر اساس کمترین قیمت واریانت محاسبه می‌شود'})
     minPrice: number;
 
     @IsNumber({}, {message: "حداکثر قیمت باید عدد باشد"})
-    @ApiProperty({example: 100000})
+    @ApiProperty({example: 100000, description: 'حداکثر قیمت محصول. اگر isVariant=true باشد، این مقدار بر اساس بیشترین قیمت واریانت محاسبه می‌شود'})
     maxPrice: number;
 
     @IsOptional()
@@ -73,7 +73,10 @@ export class CreateProductDto {
                 attributes: { type: 'object', additionalProperties: { type: 'string' } },
                 price: { type: 'number' },
                 stock: { type: 'number' },
-                sku: { type: 'string' }
+                sku: { type: 'string' },
+                discount: { type: 'boolean' },
+                discountPrice: { type: 'number' },
+                images: { type: 'array', items: { type: 'number' } }
             }
         },
         description: 'لیست واریانت‌های محصول',
@@ -82,13 +85,19 @@ export class CreateProductDto {
                 attributes: { color: '6822e5cf437c593be04b2ddc' },
                 price: 120000,
                 stock: 5,
-                sku: 'variant-sku-1'
+                sku: 'variant-sku-1',
+                discount: true,
+                discountPrice: 100000,
+                images: [1, 2, 3]
             },
             {
                 attributes: { color: '6822e5d7437c593be04b2de5' },
                 price: 100000,
                 stock: 5,
-                sku: 'variant-sku-2'
+                sku: 'variant-sku-2',
+                discount: false,
+                discountPrice: 0,
+                images: [4, 5]
             }
         ]
     })
@@ -96,7 +105,10 @@ export class CreateProductDto {
         attributes: { [key: string]: string },
         price: number,
         stock: number,
-        sku: string
+        sku: string,
+        discount?: boolean,
+        discountPrice?: number,
+        images?: number[]
     }>;
 
     @IsOptional()

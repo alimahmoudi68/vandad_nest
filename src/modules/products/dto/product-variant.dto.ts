@@ -1,4 +1,4 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { ProductVariantAttributeDto } from './product-variant-attribute.dto';
 
@@ -18,6 +18,19 @@ export class ProductVariantDto {
   @ApiProperty()
   @Expose()
   stock: number;
+
+  @ApiProperty()
+  @Expose()
+  discount: boolean;
+
+  @ApiProperty()
+  @Expose()
+  discountPrice: number;
+
+  @ApiProperty({ type: [Number], description: 'Array of image IDs' })
+  @Expose()
+  @Transform(({ value }) => value?.map((img: any) => img.id) || [])
+  images: number[];
 
   @ApiProperty()
   @Expose()

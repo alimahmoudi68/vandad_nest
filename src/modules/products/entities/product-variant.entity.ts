@@ -1,10 +1,11 @@
 // src/modules/products/entities/product-variant.entity.ts
 import {
     Entity, PrimaryGeneratedColumn, Column,
-    CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, Unique
+    CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, Unique, ManyToMany, JoinTable
   } from 'typeorm';
   import { ProductEntity } from './product.entity';
   import { ProductVariantAttributeEntity } from './product-variant-attribute.entity';
+  import { UploadEntity } from 'src/modules/upload/entities/upload.entity';
   
   @Entity('product_variants')
   @Unique(['sku']) // برای یکتا بودن SKU
@@ -21,14 +22,24 @@ import {
     @Column('decimal', { precision: 10, scale: 2 })
     price: number;
   
-    @Column({ type: 'int', default: 0 })
-    stock: number;
-  
-    @OneToMany(() => ProductVariantAttributeEntity, attr => attr.variant, {
-      cascade: true,
-      eager: true // در صورت نیاز
-    })
-    attributes: ProductVariantAttributeEntity[];
+  @Column({ type: 'int', default: 0 })
+  stock: number;
+
+  @Column({ default: false })
+  discount: boolean;
+
+  @Column({ default: 0, type: 'int' })
+  discountPrice: number;
+
+  @ManyToMany(() => UploadEntity)
+  @JoinTable()
+  images: UploadEntity[];
+
+  @OneToMany(() => ProductVariantAttributeEntity, attr => attr.variant, {
+    cascade: true,
+    eager: true // در صورت نیاز
+  })
+  attributes: ProductVariantAttributeEntity[];
   
     @CreateDateColumn()
     createdAt: Date;

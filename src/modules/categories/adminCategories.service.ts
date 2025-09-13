@@ -11,6 +11,8 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CategoryEntity } from './entities/category.entity';
 import { ConflictMessage } from 'src/common/enums/messages.enum';
+import { AttributeService } from '../attribute/attribute.service';
+import { AttributeEntity } from '../attribute/entities/attribute.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { paginationSolver } from 'src/utils/common/paginationSolver';
 
@@ -19,10 +21,11 @@ export class AdminCategoriesService {
   constructor(
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
+    private readonly attributeService: AttributeService,
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto) {
-    let { title, slug, description, parent } = createCategoryDto;
+    let { title, slug, description, parent, attributes } = createCategoryDto;
     title = await this.checkExistAndResolveTitle(title);
 
     // Check for duplicate slug
@@ -42,11 +45,24 @@ export class AdminCategoriesService {
       }
     }
 
+    // مقداردهی attributes اگر وجود داشته باشد
+    let attributeEntities: AttributeEntity[] = [];
+    if (attributes && Array.isArray(attributes) && attributes.length > 0) {
+      attributeEntities = await Promise.all(
+        attributes.map(async (attrId) => {
+          const attr = await this.attributeService.findOne(attrId);
+          if (!attr || !attr.attribute) throw new NotFoundException(`ویژگی با آیدی ${attrId} پیدا نشد`);
+          return attr.attribute;
+        })
+      );
+    }
+
     let newCategory = this.categoryRepository.create({
       title,
       slug,
       description,
       parent: parentCategory || undefined,
+      attributes: attributeEntities,
     });
     const newProduct = await this.categoryRepository.save(newCategory);
     return { product: newProduct };
@@ -61,6 +77,9 @@ export class AdminCategoriesService {
         parent: IsNull(),
       },
       relations: {
+        attributes: {
+          metas : true
+        },
         childs: true,
       },
       skip,
@@ -95,6 +114,19 @@ export class AdminCategoriesService {
     return {categories};
   }
 
+  async findAllParents () {
+    
+    const categories = await this.categoryRepository.find({
+      where: {
+        parent: IsNull(),
+      },
+    });
+
+    return {categories};
+  }
+
+  
+
   async findOne(id: number) {
     const category = await this.categoryRepository.findOne({
       where: {
@@ -102,7 +134,10 @@ export class AdminCategoriesService {
       },
       relations:{
         parent: true,
-        childs: true
+        childs: true,
+        attributes:{
+          metas : true
+        }
       }
     });
     if (!category) {
@@ -114,6 +149,7 @@ export class AdminCategoriesService {
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
     const category = await this.categoryRepository.findOne({
       where: { id },
+      relations: { attributes: true, parent: true },
     });
     if (!category) {
       throw new NotFoundException('دسته بندی مورد نظر پیدا نشد');
@@ -153,6 +189,21 @@ export class AdminCategoriesService {
         }
         category.parent = parentCategory;
       }
+    }
+
+    // مقداردهی attributes اگر وجود داشته باشد
+    if (attributes !== undefined) {
+      let attributeEntities: AttributeEntity[] = [];
+      if (Array.isArray(attributes) && attributes.length > 0) {
+        attributeEntities = await Promise.all(
+          attributes.map(async (attrId) => {
+            const attr = await this.attributeService.findOne(attrId);
+            if (!attr || !attr.attribute) throw new NotFoundException(`ویژگی با آیدی ${attrId} پیدا نشد`);
+            return attr.attribute;
+          })
+        );
+      }
+      category.attributes = attributeEntities;
     }
 
     await this.categoryRepository.save(category);
