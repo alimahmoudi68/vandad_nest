@@ -10,6 +10,6 @@ import { S3Service } from '../s3/s3.service';
   imports:[AuthModule , TypeOrmModule.forFeature([UploadEntity])],
   controllers: [UploadController],
   providers: [UploadService, S3Service],
-  exports: [TypeOrmModule]
+  exports: [TypeOrmModule, UploadService]
 })
 export class UploadModule {}

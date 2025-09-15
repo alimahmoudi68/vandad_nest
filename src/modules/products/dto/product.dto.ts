@@ -1,7 +1,8 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Transform } from 'class-transformer';
 import { ProductAttributeDto } from './product-attribute.dto';
 import { ProductVariantDto } from './product-variant.dto';
 import { CategoryDto } from 'src/modules/categories/dto/category.dto';
+import { UploadDto } from 'src/modules/upload/dto/upload.dto';
 
 
 export class ProductDto {
@@ -15,13 +16,10 @@ export class ProductDto {
   slug: string;
 
   @Expose()
-  minPrice: number;
-
-  @Expose()
-  maxPrice: number;
-
-  @Expose()
   isVariant: boolean;
+
+  @Expose()
+  description: string;
 
   @Expose()
   discount: boolean;
@@ -51,8 +49,9 @@ export class ProductDto {
   sku: string;
 
   @Expose()
-  thumbnail: number;
+  @Type(() => UploadDto)
+  thumbnail: UploadDto;
 
   @Expose()
-  images: number[];
+  images: UploadDto[];
 } 

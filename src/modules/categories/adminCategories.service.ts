@@ -108,7 +108,7 @@ export class AdminCategoriesService {
     const categories = await this.categoryRepository.find({
       where: {
         parent: Not(IsNull()),
-      },
+      }
     });
 
     return {categories};

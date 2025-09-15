@@ -25,11 +25,6 @@ export class ProductEntity {
     @Column({nullable: false})
     price: number
 
-    @Column({nullable: false})
-    minPrice: number
-
-    @Column({nullable: false})
-    maxPrice: number
 
     @Column({ nullable: true })
     stock?: number;

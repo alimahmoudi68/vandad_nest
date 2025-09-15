@@ -12,7 +12,7 @@ import {
     @PrimaryGeneratedColumn()
     id: number;
   
-    @ManyToOne(() => ProductEntity, product => product.attributes)
+    @ManyToOne(() => ProductEntity, product => product.attributes, { onDelete: 'CASCADE' })
     product: ProductEntity;
   
     @ManyToOne(() => AttributeEntity)

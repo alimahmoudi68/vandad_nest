@@ -7,7 +7,6 @@ import { In, Repository } from 'typeorm';
 import { CategoryEntity } from '../categories/entities/category.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { paginationSolver } from 'src/utils/common/paginationSolver';
-import { isArray } from 'class-validator';
 import { UploadEntity } from '../upload/entities/upload.entity';
 import { plainToInstance } from 'class-transformer';
 import { ProductDto } from './dto/product.dto';
@@ -15,6 +14,10 @@ import { AttributeEntity } from '../attribute/entities/attribute.entity';
 import { ProductAttributeEntity } from './entities/product-attribute.entity';
 import { ProductVariantEntity } from './entities/product-variant.entity';
 import { ProductVariantAttributeEntity } from './entities/product-variant-attribute.entity';
+import { randomId } from 'src/utils/common/randomId';
+
+import slugify from 'src/utils/common/slugify';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class AdminProductsService {
@@ -27,32 +30,16 @@ export class AdminProductsService {
     @InjectRepository(UploadEntity)
     private readonly uploadRepository: Repository<UploadEntity>,
     @InjectRepository(AttributeEntity)
-    private readonly attributeRepository: Repository<AttributeEntity>
+    private readonly attributeRepository: Repository<AttributeEntity>,
+    private readonly uploadService: UploadService
   ){}
 
-  /**
-   * محاسبه قیمت‌های محصول بر اساس واریانت‌ها
-   */
-  private calculateProductPricesFromVariants(variantPrices: number[]): { minPrice: number, maxPrice: number, basePrice: number } {
-    if (variantPrices.length === 0) {
-      return { minPrice: 0, maxPrice: 0, basePrice: 0 };
-    }
-    
-    const minPrice = Math.min(...variantPrices);
-    const maxPrice = Math.max(...variantPrices);
-    const basePrice = minPrice; // قیمت پایه = کمترین قیمت واریانت
-    
-    return { minPrice, maxPrice, basePrice };
-  }
 
-  
+
   async create(createProductDto: CreateProductDto) {
     let {
       title,
-      slug,
       price,
-      maxPrice,
-      minPrice,
       stock,
       sku,
       thumbnail,
@@ -62,26 +49,60 @@ export class AdminProductsService {
       isVariant,
       attributes,
       variants,
-      discount,
       discountPrice
     } = createProductDto;
 
-    // Check for duplicate slug
-    const existSlug = await this.productRepository.findOne({ where: { slug } });
-    if (existSlug) {
-      throw new BadRequestException('محصولی با این اسلاگ قبلاً ثبت شده است');
+    // console.log('thumbnail' , thumbnail);
+    // console.log('images' , images);
+    // console.log('variants' , variants);
+
+    // Check for duplicate SKU
+    if (sku) {
+      const existSku = await this.productRepository.findOne({ where: { sku } });
+      if (existSku) {
+        throw new BadRequestException('محصولی با این SKU قبلاً ثبت شده است');
+      }
     }
 
-    if (!isArray(categories) && typeof categories == "string") {
-      categories = categories.split(",");
-    } else if (!categories) {
-      throw new BadRequestException("دسته بندی آرایه نیست");
+    // Helper to coerce possibly-empty string numbers to numeric defaults
+    const toNumber = (val: any, fallback = 0): number => {
+      const n = Number(val);
+      return Number.isFinite(n) ? n : fallback;
+    };
+
+    // Normalize main product numbers
+    const normalizedPrice = toNumber(price, 0);
+    const normalizedStock = stock === undefined || stock === null ? undefined : toNumber(stock, 0);
+    const normalizedDiscountPrice = toNumber(discountPrice, 0);
+
+    // Check for duplicate slug
+    let slug = slugify(title);
+    const existSlug = await this.productRepository.findOne({ where: { slug } });
+    if (existSlug) {
+      slug += `-${randomId()}`;
     }
 
     // تبدیل thumbnail و images به entity
     let imagesEntities: UploadEntity[] = [];
-    if (images && Array.isArray(images)) {
-      imagesEntities = await this.uploadRepository.findBy({ id: In(images) });
+    if (images) {
+      // اگر images یک object است، آن را به آرایه تبدیل کن
+      let imageIds: number[] = [];
+      if (Array.isArray(images)) {
+        imageIds = images;
+      } else if (typeof images === 'object' && images !== null) {
+        // اگر object است، سعی کن id را استخراج کن
+        imageIds = [(images as any).id || 0].filter(id => id > 0);
+      }
+      
+      if (imageIds.length > 0) {
+        console.log('imageIds for main product:', imageIds);
+        // بررسی اضافی برای اطمینان از اینکه آرایه است
+        if (Array.isArray(imageIds)) {
+          imagesEntities = await this.uploadRepository.findBy({ id: In(imageIds) });
+        } else {
+          console.error('imageIds is not an array:', imageIds);
+        }
+      }
     }
     let thumbnailEntity: UploadEntity | undefined = undefined;
     if (thumbnail) {
@@ -96,7 +117,7 @@ export class AdminProductsService {
     let allowedAttributes: string[] = [];
     let allowedMetas: number[] = [];
     if (categories) {
-      const categoryId = Number(categories[0]); // اگر فقط یکی داری
+      const categoryId = Number(categories); // اگر فقط یکی داری
       const category = await this.categoryRepository.findOne({
         where: { id: categoryId },
         relations: { attributes: { metas: true } }
@@ -143,22 +164,20 @@ export class AdminProductsService {
     const newProduct = this.productRepository.create({
       title,
       slug,
-      price,
-      minPrice,
-      maxPrice,
+      price: normalizedPrice, // اگر isVariant=true باشد، این مقدار بعداً از واریانت‌ها محاسبه می‌شود
+      discountPrice: normalizedDiscountPrice,
+      discount: normalizedDiscountPrice > 0 ? true : false,
       description,
-      stock,
-      sku,
+      stock: normalizedStock,
+      sku: sku ?? "", // اگر isVariant=true باشد، SKU در واریانت‌ها تعریف می‌شود
       thumbnail: thumbnailEntity,
       images: imagesEntities,
       isVariant: !!isVariant,
-      discount: !!discount,
-      discountPrice: discountPrice ?? 0
     });
 
     // دسته‌بندی‌ها
     if (categories) {
-      const categoriesFounded = await this.categoryRepository.findBy({ id: In(categories) });
+      const categoriesFounded = await this.categoryRepository.findBy({ id: categories });
       newProduct.categories = categoriesFounded;
     }
 
@@ -188,30 +207,65 @@ export class AdminProductsService {
 
     // ذخیره variants
     if (variants && Array.isArray(variants)) {
+      // Validate variant SKUs are unique (in request and DB)
+      const variantSkus = variants
+        .map(v => (v?.sku ?? '').toString().trim())
+        .filter(s => !!s);
+      if (variantSkus.length > 0) {
+        // Duplicates inside request
+        const duplicateInRequest = variantSkus.find((s, idx) => variantSkus.indexOf(s) !== idx);
+        if (duplicateInRequest) {
+          throw new BadRequestException(`SKU واریانت تکراری در ورودی: ${duplicateInRequest}`);
+        }
+
+        // Duplicates against DB (products and variants)
+        const variantRepo = this.productRepository.manager.getRepository(ProductVariantEntity);
+        const [existInProducts, existInVariants] = await Promise.all([
+          this.productRepository.findOne({ where: { sku: In(variantSkus) } }),
+          variantRepo.findOne({ where: { sku: In(variantSkus) } })
+        ]);
+        if (existInProducts || existInVariants) {
+          throw new BadRequestException('SKU یکی از واریانت‌ها قبلاً ثبت شده است');
+        }
+      }
+
       const variantEntities: ProductVariantEntity[] = [];
       const variantPrices: number[] = [];
       
       for (const variant of variants) {
-        const { attributes: variantAttrs, price, stock, sku, discount, discountPrice, images } = variant;
+        const { attributes: variantAttrs, price, stock, sku, discountPrice, images } = variant;
+
+        const vPrice = toNumber(price, 0);
+        const vStock = stock === undefined || stock === null ? undefined : toNumber(stock, 0);
+        const vDiscountPrice = toNumber(discountPrice, 0);
 
         // ساخت و ذخیره واریانت
         const variantEntity = this.productRepository.manager.create(ProductVariantEntity, {
           product: savedProduct,
-          price,
-          stock,
+          price: vPrice,
+          stock: vStock,
           sku,
-          discount: discount ?? false,
-          discountPrice: discountPrice ?? 0,
+          discount: vDiscountPrice > 0 ? true : false,
+          discountPrice: vDiscountPrice,
         });
 
         // ذخیره واریانت تا id داشته باشد
         const savedVariant = await this.productRepository.manager.save(ProductVariantEntity, variantEntity) as ProductVariantEntity;
 
         // اضافه کردن تصاویر واریانت
-        if (images && Array.isArray(images) && images.length > 0) {
-          const variantImages = await this.uploadRepository.findBy({ id: In(images) });
-          savedVariant.images = variantImages;
-          await this.productRepository.manager.save(ProductVariantEntity, savedVariant);
+        if (images) {
+          let variantImageIds: number[] = [];
+          if (Array.isArray(images)) {
+            variantImageIds = images;
+          } else if (typeof images === 'object' && images !== null) {
+            variantImageIds = [(images as any).id || 0].filter(id => id > 0);
+          }
+          
+          if (variantImageIds.length > 0) {
+            const variantImages = await this.uploadRepository.findBy({ id: In(variantImageIds) });
+            savedVariant.images = variantImages;
+            await this.productRepository.manager.save(ProductVariantEntity, savedVariant);
+          }
         }
 
         // ساخت ویژگی‌های واریانت
@@ -238,17 +292,7 @@ export class AdminProductsService {
         variantPrices.push(price);
       }
       
-      // محاسبه minPrice و maxPrice بر اساس واریانت‌ها
-      if (variantPrices.length > 0) {
-        const { minPrice, maxPrice, basePrice } = this.calculateProductPricesFromVariants(variantPrices);
-        
-        // به‌روزرسانی قیمت‌های محصول اصلی
-        savedProduct.minPrice = minPrice;
-        savedProduct.maxPrice = maxPrice;
-        savedProduct.price = basePrice;
-        
-        await this.productRepository.save(savedProduct);
-      }
+   
       
       savedProduct.variants = variantEntities;
     }
@@ -262,6 +306,7 @@ export class AdminProductsService {
     const query = this.productRepository.createQueryBuilder('product')
       .leftJoinAndSelect('product.categories', 'category')
       .leftJoinAndSelect('category.attributes', 'categoryAttribute')
+      .leftJoinAndSelect('product.thumbnail', 'thumbnail')
       .leftJoinAndSelect('product.variants', 'variant')
       .leftJoinAndSelect('variant.attributes', 'variantAttribute')
       .leftJoinAndSelect('variantAttribute.attribute', 'variantAttr')
@@ -302,10 +347,6 @@ export class AdminProductsService {
       }
     }
 
-    // لاگ برای بررسی مقدار واقعی metas قبل از mapping
-    if (products.length > 0 && products[0].categories.length > 0 && products[0].categories[0].attributes.length > 0) {
-      console.log('metas sample:', JSON.stringify(products[0].categories[0].attributes[0].metas, null, 2));
-    }
 
     return {
       products: products.map(product =>
@@ -320,7 +361,6 @@ export class AdminProductsService {
       },
     };
   }
-  
   
 
   async findOne(id: number) {
@@ -339,6 +379,8 @@ export class AdminProductsService {
         'attributes',
         'attributes.attribute',
         'attributes.attributeMeta',
+        'images',
+        'thumbnail',
       ],
     });
 
@@ -369,10 +411,10 @@ export class AdminProductsService {
       }
     }
 
-    // خروجی به صورت ProductDto
-    return plainToInstance(ProductDto, product, {
-      excludeExtraneousValues: true,
-    });
+    return {
+      product : plainToInstance(ProductDto, product, { excludeExtraneousValues: true })
+    }
+
   }
 
   async update(id: number, updateProductDto: UpdateProductDto) {
@@ -380,8 +422,6 @@ export class AdminProductsService {
       title,
       slug,
       price,
-      maxPrice,
-      minPrice,
       stock,
       sku,
       thumbnail,
@@ -412,8 +452,6 @@ export class AdminProductsService {
     if (title !== undefined) product.title = title;
     if (slug !== undefined) product.slug = slug;
     if (price !== undefined) product.price = price;
-    if (minPrice !== undefined) product.minPrice = minPrice;
-    if (maxPrice !== undefined) product.maxPrice = maxPrice;
     if (stock !== undefined) product.stock = stock;
     if (sku !== undefined) product.sku = sku;
     if (description !== undefined) product.description = description;
@@ -423,16 +461,22 @@ export class AdminProductsService {
 
     // دسته‌بندی‌ها
     if (categories) {
-      if (!isArray(categories) && typeof categories == "string") {
-        categories = categories.split(",");
-      }
-      const categoriesFounded = await this.categoryRepository.findBy({ id: In(categories) });
+      const categoriesFounded = await this.categoryRepository.findBy({ id: categories });
       product.categories = categoriesFounded;
     }
 
     // تصاویر
-    if (images && Array.isArray(images)) {
-      product.images = await this.uploadRepository.findBy({ id: In(images) });
+    if (images) {
+      let imageIds: number[] = [];
+      if (Array.isArray(images)) {
+        imageIds = images;
+      } else if (typeof images === 'object' && images !== null) {
+        imageIds = [(images as any).id || 0].filter(id => id > 0);
+      }
+      
+      if (imageIds.length > 0) {
+        product.images = await this.uploadRepository.findBy({ id: In(imageIds) });
+      }
     }
 
     // thumbnail
@@ -479,7 +523,7 @@ export class AdminProductsService {
       const variantPrices: number[] = [];
       
       for (const variant of variants) {
-        const { attributes: variantAttrs, price, stock, sku, discount, discountPrice, images } = variant;
+        const { attributes: variantAttrs, price, stock, sku, discountPrice, images } = variant;
 
         // ساخت و ذخیره واریانت
         const variantEntity = this.productRepository.manager.create(ProductVariantEntity, {
@@ -487,17 +531,26 @@ export class AdminProductsService {
           price,
           stock,
           sku,
-          discount: discount ?? false,
+          discount: (discountPrice ?? 0) > 0 ? true : false,
           discountPrice: discountPrice ?? 0,
         });
 
         const savedVariant = await this.productRepository.manager.save(ProductVariantEntity, variantEntity) as ProductVariantEntity;
 
         // اضافه کردن تصاویر واریانت
-        if (images && Array.isArray(images) && images.length > 0) {
-          const variantImages = await this.uploadRepository.findBy({ id: In(images) });
-          savedVariant.images = variantImages;
-          await this.productRepository.manager.save(ProductVariantEntity, savedVariant);
+        if (images) {
+          let variantImageIds: number[] = [];
+          if (Array.isArray(images)) {
+            variantImageIds = images;
+          } else if (typeof images === 'object' && images !== null) {
+            variantImageIds = [(images as any).id || 0].filter(id => id > 0);
+          }
+          
+          if (variantImageIds.length > 0) {
+            const variantImages = await this.uploadRepository.findBy({ id: In(variantImageIds) });
+            savedVariant.images = variantImages;
+            await this.productRepository.manager.save(ProductVariantEntity, savedVariant);
+          }
         }
 
         // ساخت ویژگی‌های واریانت
@@ -522,16 +575,6 @@ export class AdminProductsService {
         variantPrices.push(price);
       }
       
-      // محاسبه minPrice و maxPrice بر اساس واریانت‌ها
-      if (variantPrices.length > 0) {
-        const { minPrice, maxPrice, basePrice } = this.calculateProductPricesFromVariants(variantPrices);
-        
-        // به‌روزرسانی قیمت‌های محصول اصلی
-        product.minPrice = minPrice;
-        product.maxPrice = maxPrice;
-        product.price = basePrice;
-      }
-      
       product.variants = variantEntities;
     }
 
@@ -542,6 +585,8 @@ export class AdminProductsService {
     return plainToInstance(ProductDto, savedProduct, { excludeExtraneousValues: true });
   }
 
+
+  
   async remove(id: number) {
     // پیدا کردن محصول با روابط لازم
     const product = await this.productRepository.findOne({
@@ -550,14 +595,73 @@ export class AdminProductsService {
         'attributes',
         'variants',
         'variants.attributes',
+        'variants.images',
+        'images',
+        'thumbnail',
       ],
     });
     if (!product) {
       throw new NotFoundException('محصول پیدا نشد');
     }
 
-    // حذف محصول (با توجه به cascade و onDelete، روابط هم حذف می‌شوند)
-    await this.productRepository.remove(product);
+    // به صورت صریح ابتدا جداول وابسته حذف شوند تا ارور FK ندهد
+    const manager = this.productRepository.manager;
+
+    // جمع آوری همه آپلودهای مرتبط (thumbnail, images محصول و تصاویر واریانت‌ها)
+    const uploadIdsToDelete: number[] = [];
+    if (product.thumbnail) uploadIdsToDelete.push(product.thumbnail.id);
+    if (product.images && product.images.length > 0) {
+      uploadIdsToDelete.push(...product.images.map(img => img.id));
+    }
+    if (product.variants && product.variants.length > 0) {
+      for (const variant of product.variants) {
+        if (variant.images && variant.images.length > 0) {
+          uploadIdsToDelete.push(...variant.images.map(img => img.id));
+        }
+      }
+    }
+
+    // حذف ویژگی‌های واریانت‌ها
+    if (product.variants && product.variants.length > 0) {
+      const variantIds = product.variants.map(v => v.id);
+      if (variantIds.length > 0) {
+        await manager
+          .createQueryBuilder()
+          .delete()
+          .from('product_variant_attributes')
+          .where('variantId IN (:...variantIds)', { variantIds })
+          .execute();
+      }
+
+      // حذف خود واریانت‌ها (رکوردهای join تصاویر ManyToMany نیز حذف می‌شوند)
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from('product_variants')
+        .where('productId = :productId', { productId: product.id })
+        .execute();
+    }
+
+    // حذف ویژگی‌های محصول
+    await manager
+      .createQueryBuilder()
+      .delete()
+      .from('product_attributes')
+      .where('productId = :productId', { productId: product.id })
+      .execute();
+
+    // حذف رکورد محصول (و join table های تصاویر محصول)
+    await this.productRepository.delete(product.id);
+
+    // حذف فایل‌های آپلود از S3 و دیتابیس
+    for (const uploadId of Array.from(new Set(uploadIdsToDelete))) {
+      try {
+        await this.uploadService.remove(uploadId);
+      } catch (e) {
+        // swallow error to ensure product deletion flow continues
+      }
+    }
+
     return { message: 'محصول با موفقیت حذف شد' };
   }
 }

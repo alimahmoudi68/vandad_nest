@@ -15,6 +15,10 @@ export class AttributeDto {
   @Expose()
   slug: string;
 
+  @ApiProperty()
+  @Expose()
+  isDynamic: boolean;
+
   @ApiProperty({ type: () => [AttributeMetaDto] })
   @Expose()
   @Type(() => AttributeMetaDto)

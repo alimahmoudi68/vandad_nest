@@ -1,5 +1,5 @@
 import { ApiAcceptedResponse, ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, Length } from "class-validator";
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, Length, ValidateIf } from "class-validator";
 
 export class CreateProductDto {
 
@@ -8,10 +8,16 @@ export class CreateProductDto {
     @ApiProperty({example: 'گوشی اپل'})
     title: string
 
+    @IsOptional() 
+    @IsString({message: "اسلاگ باید رشته باشد"}) 
+    @ApiProperty({example: 'mobile-apple'}) 
+    slug?: string;
+
+    @ValidateIf(o => !o.variants || o.variants.length === 0)
     @IsNumber({},{message:"قیمت باید عدد باشد"})
-    @IsNotEmpty()
-    @ApiProperty({example: 100000, description: 'قیمت محصول. اگر isVariant=true باشد، این قیمت بر اساس کمترین قیمت واریانت محاسبه می‌شود'})
-    price: number
+    @IsNotEmpty({message: "قیمت محصول الزامی است"})
+    @ApiProperty({example: 100000, description: 'قیمت محصول. اگر isVariant=true باشد، این فیلد اختیاری است و قیمت بر اساس کمترین قیمت واریانت محاسبه می‌شود'})
+    price?: number
 
     @IsString({message : "توضیحات باید رشته باشد"})
     @IsOptional()
@@ -19,27 +25,15 @@ export class CreateProductDto {
     @ApiProperty({example: 'بهترین گوشی موبایل'})
     description: string
 
-    @IsOptional()
-    @IsString({message: "اسلاگ باید رشته باشد"})
-    @ApiProperty({example: 'mobile-apple'})
-    slug?: string;
-
-    @IsNumber({}, {message: "حداقل قیمت باید عدد باشد"})
-    @ApiProperty({example: 100000, description: 'حداقل قیمت محصول. اگر isVariant=true باشد، این مقدار بر اساس کمترین قیمت واریانت محاسبه می‌شود'})
-    minPrice: number;
-
-    @IsNumber({}, {message: "حداکثر قیمت باید عدد باشد"})
-    @ApiProperty({example: 100000, description: 'حداکثر قیمت محصول. اگر isVariant=true باشد، این مقدار بر اساس بیشترین قیمت واریانت محاسبه می‌شود'})
-    maxPrice: number;
-
-    @IsOptional()
+    @ValidateIf(o => !o.variants || o.variants.length === 0)
     @IsNumber({}, {message: "موجودی باید عدد باشد"})
     @ApiProperty({example: 10})
     stock?: number;
 
-    @IsOptional()
+    @ValidateIf(o => !o.variants || o.variants.length === 0)
     @IsString({message: "کد SKU باید رشته باشد"})
-    @ApiProperty({example: 'simple-sku'})
+    @IsNotEmpty({message: "کد SKU محصول الزامی است"})
+    @ApiProperty({example: 'simple-sku', description: 'کد SKU محصول. اگر isVariant=true باشد، این فیلد اختیاری است و SKU در هر واریانت تعریف می‌شود'})
     sku?: string;
 
     @IsOptional()
@@ -51,10 +45,9 @@ export class CreateProductDto {
     @ApiProperty({type: Number, isArray: true, example: []})
     images?: number[];
 
-    @IsOptional()
     //@IsArray() // درخالت فرم میاد توی یک رشته میفرسته که با کاما جدا شده برای همین ارایه را کامنت کردم
     @ApiProperty({type: String , isArray: true, example: [1]})
-    categories: string[] | string 
+    categories: number 
 
     @IsOptional()
     @ApiProperty({ type: Boolean, default: false, example: false })
