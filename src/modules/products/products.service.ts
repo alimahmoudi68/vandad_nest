@@ -47,7 +47,7 @@ export class ProductsService {
       where : {
         id
       },
-      relations : ['categories', 'attributes', 'variants']
+      relations : ['categories', 'attributes', 'variants', 'variants.images']
     });
 
     if(!product){

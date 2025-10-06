@@ -52,6 +52,7 @@ export class ProductDto {
   @Type(() => UploadDto)
   thumbnail: UploadDto;
 
-  @Expose()
+  @Expose({ name: 'images' })
+  @Type(() => UploadDto)
   images: UploadDto[];
 } 

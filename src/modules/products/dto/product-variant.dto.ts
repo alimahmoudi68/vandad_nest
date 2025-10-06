@@ -1,6 +1,7 @@
 import { Expose, Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { ProductVariantAttributeDto } from './product-variant-attribute.dto';
+import { UploadDto } from 'src/modules/upload/dto/upload.dto';
 
 export class ProductVariantDto {
   @ApiProperty()
@@ -27,10 +28,10 @@ export class ProductVariantDto {
   @Expose()
   discountPrice: number;
 
-  @ApiProperty({ type: [Number], description: 'Array of image IDs' })
+  @ApiProperty({ type: () => [UploadDto], description: 'Array of image objects' })
   @Expose()
-  @Transform(({ value }) => value?.map((img: any) => img.id) || [])
-  images: number[];
+  @Type(() => UploadDto)
+  images: UploadDto[];
 
   @ApiProperty()
   @Expose()

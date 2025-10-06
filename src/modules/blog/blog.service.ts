@@ -66,7 +66,6 @@ export class BlogService {
 
     let uploadEntity: UploadEntity | null = null;
     if (image) {
-      console.log('32');
       uploadEntity = await this.uploadRepository.findOneBy({
         id: image,
       });
